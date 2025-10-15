@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#EF4444">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <meta name="description" content="Bonus Driving School - South African Learner License Tests">
+
+    <title>Bonus Driving School</title>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+
+        body { margin: 0; padding: 0; overflow-x: hidden; }
+
+        * { box-sizing: border-box; }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+
+        const { useState, useEffect } = React;
+
+        const { BookOpen, Settings, User, CheckCircle, XCircle, Award, BarChart3, ArrowLeft, Plus, Trash2, Edit2, Save, Image } = lucide;
+
+        const defaultQuestions = {
+
+          code1: [
+
+            { id: 1, question: "What is the speed limit in an urban area?", options: ["60 km/h", "80 km/h", "100 km/h", "120 km/h"], correct: 0, image: null },
+
+            { id: 2, question: "What does a red traffic light mean?", options: ["Slow down", "Stop", "Proceed with caution", "Yield"], correct: 1, image: null },
+
+            { id: 3, question: "What is the legal blood alcohol limit for drivers in South Africa?", options: ["0.05g per 100ml", "0.08g per 100ml", "0.10g per 100ml", "0.15g per 100ml"], correct: 0, image: null },
+
+            { id: 4, question: "When must you use your headlights?", options: ["During the day", "Between sunset and sunrise", "Only when raining", "Never"], correct: 1, image: null },
+
+            { id: 5, question: "What does a yellow traffic light mean?", options: ["Speed up", "Stop if safe to do so", "Proceed quickly", "Turn left"], correct: 1, image: null },
+
+          ],
+
+          code2: [
+
+            { id: 1, question: "What is the maximum speed for a Code 2 vehicle on a freeway?", options: ["100 km/h", "120 km/h", "80 km/h", "60 km/h"], correct: 1, image: null },
+
+            { id: 2, question: "How often must a Code 2 vehicle be inspected?", options: ["Every 6 months", "Every year", "Every 2 years", "Every 3 years"], correct: 1, image: null },
+
+            { id: 3, question: "What is the minimum following distance in good conditions?", options: ["1 second", "2 seconds", "3 seconds", "5 seconds"], correct: 1, image: null },
+
+            { id: 4, question: "What does a green arrow with a red light mean?", options: ["Stop completely", "Proceed in direction of arrow", "Yield to traffic", "No entry"], correct: 1, image: null },
+
+            { id: 5, question: "When overtaking, what must you ensure?", options: ["Road is clear", "You have enough space", "It's safe to return", "All of the above"], correct: 3, image: null },
+
+          ],
+
+          code3: [
+
+            { id: 1, question: "What is the maximum speed for a Code 3 vehicle on a national road?", options: ["80 km/h", "100 km/h", "120 km/h", "60 km/h"], correct: 0, image: null },
+
+            { id: 2, question: "How often must a Code 3 vehicle undergo roadworthy testing?", options: ["Every 3 months", "Every 6 months", "Every year", "Every 2 years"], correct: 2, image: null },
+
+            { id: 3, question: "What is the total mass allowed for a Code 3 vehicle?", options: ["3500 kg", "9000 kg", "16000 kg", "No limit"], correct: 2, image: null },
+
+            { id: 4, question: "When must you use hazard lights?", options: ["When parking", "In an emergency", "When broken down", "All of the above"], correct: 3, image: null },
+
+            { id: 5, question: "What is the minimum tread depth for truck tires?", options: ["0.5mm", "1mm", "1.6mm", "2mm"], correct: 2, image: null },
+
+          ]
+
+        };
+
+        const App = () => {
+
+          const [page, setPage] = useState('home');
+
+          const [selectedLicense, setSelectedLicense] = useState(null);
+
+          const [idNumber, setIdNumber] = useState('');
+
+          const [currentTest, setCurrentTest] = useState([]);
+
+          const [currentQuestion, setCurrentQuestion] = useState(0);
+
+          const [answers, setAnswers] = useState([]);
+
+          const [testResults, setTestResults] = useState(null);
+
+          
+
+          const [config, setConfig] = useState(() => {
+
+            const saved = localStorage.getItem('drivingSchoolConfig');
+
+            return saved ? JSON.parse(saved) : {
+
+              appName: 'Bonus Driving School',
+
+              logo: null,
+
+              primaryColor: '#EF4444',
+
+              secondaryColor: '#000000',
+
+              backgroundColor: '#FFFFFF'
+
+            };
+
+          });
+
+          const [questions, setQuestions] = useState(() => {
+
+            const saved = localStorage.getItem('drivingSchoolQuestions');
+
+            return saved ? JSON.parse(saved) : defaultQuestions;
+
+          });
+
+          const [testHistory, setTestHistory] = useState(() => {
+
+            const saved = localStorage.getItem('drivingSchoolHistory');
+
+            return saved ? JSON.parse(saved) : {};
+
+          });
+
+          const [adminPassword] = useState('admin123');
+
+          const [isAdmin, setIsAdmin] = useState(false);
+
+          const [adminPage, setAdminPage] = useState('questions');
+
+          const [editingQuestion, setEditingQuestion] = useState(null);
+
+          const [selectedLicenseType, setSelectedLicenseType] = useState('code1');
+
+          useEffect(() => {
+
+            localStorage.setItem('drivingSchoolQuestions', JSON.stringify(questions));
+
+          }, [questions]);
+
+          useEffect(() => {
+
+            localStorage.setItem('drivingSchoolHistory', JSON.stringify(testHistory));
+
+          }, [testHistory]);
+
+          useEffect(() => {
+
+            localStorage.setItem('drivingSchoolConfig', JSON.stringify(config));
+
+          }, [config]);
+
+          const generateTest = (licenseType) => {
+
+            const allQuestions = [...questions[licenseType]];
+
+            const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+
+            return shuffled.slice(0, Math.min(130, shuffled.length));
+
+          };
+
+          const startTest = () => {
+
+            if (idNumber.trim().length < 5) {
+
+              alert('Please enter a valid ID number');
+
+              return;
+
+            }
+
+            const test = generateTest(selectedLicense);
+
+            setCurrentTest(test);
+
+            setAnswers(new Array(test.length).fill(null));
+
+            setCurrentQuestion(0);
+
+            setPage('test');
+
+          };
+
+          const submitAnswer = (answerIndex) => {
+
+            const newAnswers = [...answers];
+
+            newAnswers[currentQuestion] = answerIndex;
+
+            setAnswers(newAnswers);
+
+            if (currentQuestion < currentTest.length - 1) {
+
+              setCurrentQuestion(currentQuestion + 1);
+
+            } else {
+
+              finishTest(newAnswers);
+
+            }
+
+          };
+
+          const finishTest = (finalAnswers) => {
+
+            const results = currentTest.map((q, idx) => ({
+
+              question: q.question,
+
+              userAnswer: finalAnswers[idx],
+
+              correctAnswer: q.correct,
+
+              isCorrect: finalAnswers[idx] === q.correct,
+
+              options: q.options,
+
+              image: q.image
+
+            }));
+
+            const score = results.filter(r => r.isCorrect).length;
+
+            const percentage = ((score / results.length) * 100).toFixed(1);
+
+            const testRecord = {
+
+              date: new Date().toISOString(),
+
+              licenseType: selectedLicense,
+
+              score,
+
+              total: results.length,
+
+              percentage,
+
+              results
+
+            };
+
+            const history = { ...testHistory };
+
+            if (!history[idNumber]) {
+
+              history[idNumber] = [];
+
+            }
+
+            history[idNumber].push(testRecord);
+
+            setTestHistory(history);
+
+            setTestResults(testRecord);
+
+            setPage('results');
+
+          };
+
+          const addQuestion = () => {
+
+            const newId = Math.max(...questions[selectedLicenseType].map(q => q.id), 0) + 1;
+
+            const newQuestion = {
+
+              id: newId,
+
+              question: '',
+
+              options: ['', '', '', ''],
+
+              correct: 0,
+
+              image: null
+
+            };
+
+            setQuestions({
+
+              ...questions,
+
+              [selectedLicenseType]: [...questions[selectedLicenseType], newQuestion]
+
+            });
+
+            setEditingQuestion(newQuestion);
+
+          };
+
+          const deleteQuestion = (id) => {
+
+            if (confirm('Are you sure you want to delete this question?')) {
+
+              setQuestions({
+
+                ...questions,
+
+                [selectedLicenseType]: questions[selectedLicenseType].filter(q => q.id !== id)
+
+              });
+
+            }
+
+          };
+
+          const saveQuestion = (updatedQuestion) => {
+
+            setQuestions({
+
+              ...questions,
+
+              [selectedLicenseType]: questions[selectedLicenseType].map(q => 
+
+                q.id === updatedQuestion.id ? updatedQuestion : q
+
+              )
+
+            });
+
+            setEditingQuestion(null);
+
+          };
+
+          const handleImageUpload = (e, questionId) => {
+
+            const file = e.target.files[0];
+
+            if (file) {
+
+              const reader = new FileReader();
+
+              reader.onload = (event) => {
+
+                if (editingQuestion && editingQuestion.id === questionId) {
+
+                  setEditingQuestion({ ...editingQuestion, image: event.target.result });
+
+                }
+
+              };
+
+              reader.readAsDataURL(file);
+
+            }
+
+          };
+
+          const handleLogoUpload = (e) => {
+
+            const file = e.target.files[0];
+
+            if (file) {
+
+              const reader = new FileReader();
+
+              reader.onload = (event) => setConfig({ ...config, logo: event.target.result });
+
+              reader.readAsDataURL(file);
+
+            }
+
+          };
+
+          const renderHome = () => (
+
+            <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+
+                <h1 className="text-3xl font-bold text-white text-center">{config.appName}</h1>
+
+                {config.logo && <img src={config.logo} alt="Logo" className="mx-auto mt-4 h-20" />}
+
+              </div>
+
+              
+
+              <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+
+                <h2 className="text-2xl font-bold mb-8" style={{ color: config.secondaryColor }}>Choose Your License Type</h2>
+
+                
+
+                {['code1', 'code2', 'code3'].map((code) => (
+
+                  <button
+
+                    key={code}
+
+                    onClick={() => {
+
+                      setSelectedLicense(code);
+
+                      setPage('id-input');
+
+                    }}
+
+                    className="w-full max-w-md p-6 rounded-lg text-white font-bold text-xl shadow-lg hover:opacity-90 transition"
+
+                    style={{ backgroundColor: config.primaryColor }}
+
+                  >
+
+                    <BookOpen className="inline mr-3" size={28} />
+
+                    {code.toUpperCase().replace('CODE', 'Code ')} License Test
+
+                  </button>
+
+                ))}
+
+                
+
+                <button
+
+                  onClick={() => {
+
+                    const pass = prompt('Enter admin password:');
+
+                    if (pass === adminPassword) {
+
+                      setIsAdmin(true);
+
+                      setPage('admin');
+
+                    } else if (pass) {
+
+                      alert('Incorrect password');
+
+                    }
+
+                  }}
+
+                  className="mt-8 p-3 rounded-lg text-white"
+
+                  style={{ backgroundColor: config.secondaryColor }}
+
+                >
+
+                  <Settings className="inline mr-2" size={20} />
+
+                  Admin Access
+
+                </button>
+
+              </div>
+
+            </div>
+
+          );
+
+          const renderIdInput = () => (
+
+            <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+
+                <button onClick={() => setPage('home')} className="text-white mb-2">
+
+                  <ArrowLeft size={24} />
+
+                </button>
+
+                <h1 className="text-2xl font-bold text-white text-center">{config.appName}</h1>
+
+              </div>
+
+              
+
+              <div className="flex-1 flex flex-col items-center justify-center p-6">
+
+                <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8 border-2" style={{ borderColor: config.primaryColor }}>
+
+                  <User className="mx-auto mb-4" size={48} style={{ color: config.primaryColor }} />
+
+                  <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: config.secondaryColor }}>
+
+                    Enter Your ID Number
+
+                  </h2>
+
+                  <input
+
+                    type="text"
+
+                    value={idNumber}
+
+                    onChange={(e) => setIdNumber(e.target.value)}
+
+                    placeholder="ID Number"
+
+                    className="w-full p-4 border-2 rounded-lg mb-6 text-lg"
+
+                    style={{ borderColor: config.primaryColor }}
+
+                  />
+
+                  <button
+
+                    onClick={startTest}
+
+                    className="w-full p-4 rounded-lg text-white font-bold text-xl"
+
+                    style={{ backgroundColor: config.primaryColor }}
+
+                  >
+
+                    Start Test
+
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          );
+
+          const renderTest = () => {
+
+            const question = currentTest[currentQuestion];
+
+            return (
+
+              <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+
+                <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+
+                  <h1 className="text-xl font-bold text-white text-center">{config.appName}</h1>
+
+                  <div className="text-white text-center mt-2">
+
+                    Question {currentQuestion + 1} of {currentTest.length}
+
+                  </div>
+
+                  <div className="w-full bg-white rounded-full h-2 mt-2">
+
+                    <div 
+
+                      className="h-2 rounded-full transition-all"
+
+                      style={{ 
+
+                        backgroundColor: config.secondaryColor,
+
+                        width: `${((currentQuestion + 1) / currentTest.length) * 100}%`
+
+                      }}
+
+                    />
+
+                  </div>
+
+                </div>
+
+                
+
+                <div className="flex-1 p-6">
+
+                  <div className="max-w-2xl mx-auto">
+
+                    {question.image && (
+
+                      <img src={question.image} alt="Question" className="w-full rounded-lg mb-4" />
+
+                    )}
+
+                    <h2 className="text-xl font-bold mb-6" style={{ color: config.secondaryColor }}>
+
+                      {question.question}
+
+                    </h2>
+
+                    
+
+                    <div className="space-y-3">
+
+                      {question.options.map((option, idx) => (
+
+                        <button
+
+                          key={idx}
+
+                          onClick={() => submitAnswer(idx)}
+
+                          className="w-full p-4 rounded-lg text-left border-2 hover:opacity-80 transition font-medium"
+
+                          style={{ 
+
+                            borderColor: config.primaryColor,
+
+                            backgroundColor: answers[currentQuestion] === idx ? config.primaryColor : 'white',
+
+                            color: answers[currentQuestion] === idx ? 'white' : config.secondaryColor
+
+                          }}
+
+                        >
+
+                          {String.fromCharCode(65 + idx)}. {option}
+
+                        </button>
+
+                      ))}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            );
+
+          };
+
+          const renderResults = () => (
+
+            <div className="min-h-screen" style={{ backgroundColor: config.backgroundColor }}>
+
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+
+                <h1 className="text-2xl font-bold text-white text-center">{config.appName}</h1>
+
+              </div>
+
+              
+
+              <div className="p-6 max-w-4xl mx-auto">
+
+                <div className="bg-white rounded-lg shadow-lg p-8 mb-6 border-2" style={{ borderColor: config.primaryColor }}>
+
+                  <Award className="mx-auto mb-4" size={64} style={{ color: config.primaryColor }} />
+
+                  <h2 className="text-3xl font-bold text-center mb-4" style={{ color: config.secondaryColor }}>
+
+                    Test Complete!
+
+                  </h2>
+
+                  <div className="text-center mb-6">
+
+                    <div className="text-5xl font-bold mb-2" style={{ color: config.primaryColor }}>
+
+                      {testResults.percentage}%
+
+                    </div>
+
+                    <div className="text-xl" style={{ color: config.secondaryColor }}>
+
+                      {testResults.score} out of {testResults.total} correct
+
+                    </div>
+
+                  </div>
+
+                  
+
+                  {testResults.percentage >= 70 ? (
+
+                    <div className="text-center text-green-600 text-xl font-bold">
+
+                      <CheckCircle className="inline mr-2" size={28} />
+
+                      Congratulations! You passed!
+
+                    </div>
+
+                  ) : (
+
+                    <div className="text-center text-red-600 text-xl font-bold">
+
+                      <XCircle className="inline mr-2" size={28} />
+
+                      Keep practicing! You'll get there!
+
+                    </div>
+
+                  )}
+
+                </div>
+
+                <h3 className="text-2xl font-bold mb-4" style={{ color: config.secondaryColor }}>Review Your Answers</h3>
+
+                <div className="space-y-4">
+
+                  {testResults.results.map((result, idx) => (
+
+                    <div 
+
+                      key={idx}
+
+                      className="bg-white rounded-lg shadow p-4 border-l-4"
+
+                      style={{ borderColor: result.isCorrect ? '#10B981' : config.primaryColor }}
+
+                    >
+
+                      {result.image && (
+
+                        <img src={result.image} alt="Question" className="w-full rounded mb-2" />
+
+                      )}
+
+                      <div className="flex items-start">
+
+                        {result.isCorrect ? (
+
+                          <CheckCircle className="text-green-500 mr-2 flex-shrink-0 mt-1" size={20} />
+
+                        ) : (
+
+                          <XCircle className="mr-2 flex-shrink-0 mt-1" style={{ color: config.primaryColor }} size={20} />
+
+                        )}
+
+                        <div className="flex-1">
+
+                          <p className="font-bold mb-2">{idx + 1}. {result.question}</p>
+
+                          <p className="mb-1">
+
+                            <span className="font-semibold">Your answer:</span>{' '}
+
+                            <span style={{ color: result.isCorrect ? '#10B981' : config.primaryColor }}>
+
+                              {result.options[result.userAnswer]}
+
+                            </span>
+
+                          </p>
+
+                          {!result.isCorrect && (
+
+                            <p>
+
+                              <span className="font-semibold">Correct answer:</span>{' '}
+
+                              <span className="text-green-600">{result.options[result.correctAnswer]}</span>
+
+                            </p>
+
+                          )}
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+                <button
+
+                  onClick={() => {
+
+                    setPage('home');
+
+                    setIdNumber('');
+
+                    setSelectedLicense(null);
+
+                    setTestResults(null);
+
+                  }}
+
+                  className="w-full mt-6 p-4 rounded-lg text-white font-bold text-xl"
+
+                  style={{ backgroundColor: config.primaryColor }}
+
+                >
+
+                  Back to Home
+
+                </button>
+
+              </div>
+
+            </div>
+
+          );
+
+          const renderAdmin = () => (
+
+            <div className="min-h-screen" style={{ backgroundColor: config.backgroundColor }}>
+
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+
+                <button onClick={() => { setPage('home'); setIsAdmin(false); }} className="text-white mb-2">
+
+                  <ArrowLeft size={24} />
+
+                </button>
+
+                <h1 className="text-2xl font-bold text-white text-center">Admin Panel</h1>
+
+              </div>
+
+              <div className="p-6">
+
+                <div className="flex gap-2 mb-6 overflow-x-auto">
+
+                  {['questions', 'statistics', 'settings'].map((tab) => (
+
+                    <button
+
+                      key={tab}
+
+                      onClick={() => setAdminPage(tab)}
+
+                      className="px-4 py-2 rounded font-bold capitalize whitespace-nowrap"
+
+                      style={{
+
+                        backgroundColor: adminPage === tab ? config.primaryColor : '#E5E7EB',
+
+                        color: adminPage === tab ? 'white' : config.secondaryColor
+
+                      }}
+
+                    >
+
+                      {tab}
+
+                    </button>
+
+                  ))}
+
+                </div>
+
+                {adminPage === 'questions' && (
+
+                  <div>
+
+                    <div className="mb-4 flex gap-2">
+
+                      {['code1', 'code2', 'code3'].map((type) => (
+
+                        <button
+
+                          key={type}
+
+                          onClick={() => { setSelectedLicenseType(type); setEditingQuestion(null); }}
+
+                          className="px-4 py-2 rounded font-bold"
+
+                          style={{
+
+                            backgroundColor: selectedLicenseType === type ? config.primaryColor : '#E5E7EB',
+
+                            color: selectedLicenseType === type ? 'white' : config.secondaryColor
+
+                          }}
+
+                        >
+
+                          {type.toUpperCase()}
+
+                        </button>
+
+                      ))}
+
+                    </div>
+
+                    <button
+
+                      onClick={addQuestion}
+
+                      className="mb-4 px-4 py-2 rounded text-white font-bold"
+
+                      style={{ backgroundColor: config.primaryColor }}
+
+                    >
+
+                      <Plus className="inline mr-2" size={20} />
+
+                      Add Question
+
+                    </button>
+
+                    <div className="text-lg font-bold mb-2">
+
+                      Total Questions: {questions[selectedLicenseType].length}
+
+                    </div>
+
+                    {editingQuestion ? (
+
+                      <div className="bg-white p-4 rounded-lg shadow mb-4">
+
+                        <h3 className="font-bold mb-2">Edit Question</h3>
+
+                        <textarea
+
+                          value={editingQuestion.question}
+
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
+
+                          className="w-full p-2 border rounded mb-2"
+
+                          rows="3"
+
+                          placeholder="Question text"
+
+                        />
+
+                        {editingQuestion.options.map((opt, idx) => (
+
+                          <input
+
+                            key={idx}
+
+                            value={opt}
+
+                            onChange={(e) => {
+
+                              const newOpts = [...editingQuestion.options];
+
+                              newOpts[idx] = e.target.value;
+
+                              setEditingQuestion({ ...editingQuestion, options: newOpts });
+
+                            }}
+
+                            className="w-full p-2 border rounded mb-2"
+
+                            placeholder={`Option ${idx + 1}`}
+
+                          />
+
+                        ))}
+
+                        <select
+
+                          value={editingQuestion.correct}
+
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, correct: parseInt(e.target.value) })}
+
+                          className="w-full p-2 border rounded mb-2"
+
+                        >
+
+                          {editingQuestion.options.map((_, idx) => (
+
+                            <option key={idx} value={idx}>Correct Answer: Option {idx + 1}</option>
+
+                          ))}
+
+                        </select>
+
+                        <div className="mb-2">
+
+                          <label className="block font-bold mb-1">Question Image (optional)</label>
+
+                          <input
+
+                            type="file"
+
+                            accept="image/*"
+
+                            onChange={(e) => handleImageUpload(e, editingQuestion.id)}
+
+                            className="w-full p-2 border rounded"
+
+                          />
+
+                          {editingQuestion.image && (
+
+                            <img src={editingQuestion.image} alt="Preview" className="mt-2 max-w-xs rounded" />
+
+                          )}
+
+                        </div>
+
+                        <div className="flex gap-2">
+
+                          <button
+
+                            onClick={() => saveQuestion(editingQuestion)}
+
+                            className="px-4 py-2 rounded text-white"
+
+                            style={{ backgroundColor: config.primaryColor }}
+
+                          >
+
+                            <Save className="inline mr-2" size={16} />
+
+                            Save
+
+                          </button>
+
+                          <button
+
+                            onClick={() => setEditingQuestion(null)}
+
+                            className="px-4 py-2 rounded bg-gray-500 text-white"
+
+                          >
+
+                            Cancel
+
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    ) : (
+
+                      <div className="space-y-2">
+
+                        {questions[selectedLicenseType].map((q) => (
+
+                          <div key={q.id} className="bg-white p-4 rounded-lg shadow flex justify-between items-start">
+
+                            <div className="flex-1">
+
+                              <p className="font-bold">{q.question}</p>
+
+                              {q.image && <Image className="inline ml-2 text-blue-500" size={16} />}
+
+                            </div>
+
+                            <div className="flex gap-2">
+
+                              <button
+
+                                onClick={() => setEditingQuestion(q)}
+
+                                className="p-2 rounded"
+
+                                style={{ backgroundColor: config.primaryColor, color: 'white' }}
+
+                              >
+
+                                <Edit2 size={16} />
+
+                              </button>
+
+                              <button
+
+                                onClick={() => deleteQuestion(q.id)}
+
+                                className="p-2 rounded bg-red-500 text-white"
+
+                              >
+
+                                <Trash2 size={16} />
+
+                              </button>
+
+                            </div>
+
+                          </div>
+
+                        ))}
+
+                      </div>
+
+                    )}
+
+                  </div>
+
+                )}
+
+                {adminPage === 'statistics' && (
+
+                  <div>
+
+                    <h2 className="text-2xl font-bold mb-4">Test Statistics</h2>
+
+                    {Object.keys(testHistory).length === 0 ? (
+
+                      <p>No test data available yet.</p>
+
+                    ) : (
+
+                      <div className="space-y-4">
+
+                        {Object.entries(testHistory).map(([id, tests]) => (
+
+                          <div key={id} className="bg-white p-4 rounded-lg shadow">
+
+                            <h3 className="font-bold text-lg mb-2">ID: {id}</h3>
+
+                            <p className="mb-2">Total Tests: {tests.length}</p>
+
+                            {tests.map((test, idx) => (
+
+                              <div key={idx} className="border-t pt-2 mt-2">
+
+                                <p><strong>Date:</strong> {new Date(test.date).toLocaleString()}</p>
+
+                                <p><strong>License:</strong> {test.licenseType.toUpperCase()}</p>
+
+                                <p><strong>Score:</strong> {test.score}/{test.total} ({test.percentage}%)</p>
+
+                              </div>
+
+                            ))}
+
+                          </div>
+
+                        ))}
+
+                      </div>
+
+                    )}
+
+                  </div>
+
+                )}
+
+                {adminPage === 'settings' && (
+
+                  <div className="space-y-4">
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+
+                      <label className="block font-bold mb-2">App Name</label>
+
+                      <input
+
+                        type="text"
+
+                        value={config.appName}
+
+                        onChange={(e) => setConfig({ ...config, appName: e.target.value })}
+
+                        className="w-full p-2 border rounded"
+
+                      />
+
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+
+                      <label className="block font-bold mb-2">Logo Image</label>
+
+                      <input
+
+                        type="file"
+
+                        accept="image/*"
+
+                        onChange={handleLogoUpload}
+
+                        className="w-full p-2 border rounded"
+
+                      />
+
+                      {config.logo && <img src={config.logo} alt="Logo" className="mt-2 h-20" />}
+
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+
+                      <label className="block font-bold mb-2">Primary Color (Red)</label>
+
+                      <input
+
+                        type="color"
+
+                        value={config.primaryColor}
+
+                        onChange={(e) => setConfig({ ...config, primaryColor: e.target.value })}
+
+                        className="w-full h-12 border rounded"
+
+                      />
+
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+
+                      <label className="block font-bold mb-2">Secondary Color (Black)</label>
+
+                      <input
+
+                        type="color"
+
+                        value={config.secondaryColor}
+
+                        onChange={(e) => setConfig({ ...config, secondaryColor: e.target.value })}
+
+                        className="w-full h-12 border rounded"
+
+                      />
+
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+
+                      <label className="block font-bold mb-2">Background Color (White)</label>
+
+                      <input
+
+                        type="color"
+
+                        value={config.backgroundColor}
+
+                        onChange={(e) => setConfig({ ...config, backgroundColor: e.target.value })}
+
+                        className="w-full h-12 border rounded"
+
+                      />
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              </div>
+
+            </div>
+
+          );
+
+          return (
+
+            <>
+
+              {page === 'home' && renderHome()}
+
+              {page === 'id-input' && renderIdInput()}
+
+Rocket
+
+I can see several issues in your PWA code that could cause white screens:
+
+Main Issues:
+
+Incomplete Code - Your code cuts off abruptly in the middle of the return statement. The JSX is malformed which will definitely cause rendering failures.
+
+Missing Error Boundaries - Add error handling to catch and display React errors instead of white screens.
+
+CDN Reliability - Consider using local builds instead of CDN versions of React/Babel for production.
+
+Quick Fixes:
+
+Complete the JSX return statement in your App component
+Add a simple error boundary component
+Check browser console for specific error messages
+Test with a minimal version first
+For Rocket-built apps, you can find comprehensive troubleshooting guides at https://docs.rocket.new/prompt-engineering/troubleshoot-with-prompts, or contact support@rocket.new if this was generated through our platform.
+
+The incomplete JSX is likely your main culprit - fix that first and the white screen should resolve!
+
+Can you fix it?
+
+Rocket
+
+Oct 15, 2025, 2:47 AM
+
+I can help fix the main issues in your PWA code. Here's the corrected version:
+
+html
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#EF4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Bonus Driving School - South African Learner License Tests">
+    <title>Bonus Driving School</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow-x: hidden; }
+        * { box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { BookOpen, Settings, User, CheckCircle, XCircle, Award, BarChart3, ArrowLeft, Plus, Trash2, Edit2, Save, Image } = lucide;
+
+        // Error Boundary Component
+        class ErrorBoundary extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = { hasError: false };
+          }
+
+          static getDerivedStateFromError(error) {
+            return { hasError: true };
+          }
+
+          componentDidCatch(error, errorInfo) {
+            console.error('Error caught by boundary:', error, errorInfo);
+          }
+
+          render() {
+            if (this.state.hasError) {
+              return (
+                <div className="min-h-screen flex items-center justify-center bg-red-50">
+                  <div className="text-center p-6">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+                    <button 
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Reload Page
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return this.props.children;
+          }
+        }
+
+        const defaultQuestions = {
+          code1: [
+            { id: 1, question: "What is the speed limit in an urban area?", options: ["60 km/h", "80 km/h", "100 km/h", "120 km/h"], correct: 0, image: null },
+            { id: 2, question: "What does a red traffic light mean?", options: ["Slow down", "Stop", "Proceed with caution", "Yield"], correct: 1, image: null },
+            { id: 3, question: "What is the legal blood alcohol limit for drivers in South Africa?", options: ["0.05g per 100ml", "0.08g per 100ml", "0.10g per 100ml", "0.15g per 100ml"], correct: 0, image: null },
+            { id: 4, question: "When must you use your headlights?", options: ["During the day", "Between sunset and sunrise", "Only when raining", "Never"], correct: 1, image: null },
+            { id: 5, question: "What does a yellow traffic light mean?", options: ["Speed up", "Stop if safe to do so", "Proceed quickly", "Turn left"], correct: 1, image: null },
+          ],
+          code2: [
+            { id: 1, question: "What is the maximum speed for a Code 2 vehicle on a freeway?", options: ["100 km/h", "120 km/h", "80 km/h", "60 km/h"], correct: 1, image: null },
+            { id: 2, question: "How often must a Code 2 vehicle be inspected?", options: ["Every 6 months", "Every year", "Every 2 years", "Every 3 years"], correct: 1, image: null },
+            { id: 3, question: "What is the minimum following distance in good conditions?", options: ["1 second", "2 seconds", "3 seconds", "5 seconds"], correct: 1, image: null },
+            { id: 4, question: "What does a green arrow with a red light mean?", options: ["Stop completely", "Proceed in direction of arrow", "Yield to traffic", "No entry"], correct: 1, image: null },
+            { id: 5, question: "When overtaking, what must you ensure?", options: ["Road is clear", "You have enough space", "It's safe to return", "All of the above"], correct: 3, image: null },
+          ],
+          code3: [
+            { id: 1, question: "What is the maximum speed for a Code 3 vehicle on a national road?", options: ["80 km/h", "100 km/h", "120 km/h", "60 km/h"], correct: 0, image: null },
+            { id: 2, question: "How often must a Code 3 vehicle undergo roadworthy testing?", options: ["Every 3 months", "Every 6 months", "Every year", "Every 2 years"], correct: 2, image: null },
+            { id: 3, question: "What is the total mass allowed for a Code 3 vehicle?", options: ["3500 kg", "9000 kg", "16000 kg", "No limit"], correct: 2, image: null },
+            { id: 4, question: "When must you use hazard lights?", options: ["When parking", "In an emergency", "When broken down", "All of the above"], correct: 3, image: null },
+            { id: 5, question: "What is the minimum tread depth for truck tires?", options: ["0.5mm", "1mm", "1.6mm", "2mm"], correct: 2, image: null },
+          ]
+        };
+
+        const App = () => {
+          const [page, setPage] = useState('home');
+          const [selectedLicense, setSelectedLicense] = useState(null);
+          const [idNumber, setIdNumber] = useState('');
+          const [currentTest, setCurrentTest] = useState([]);
+          const [currentQuestion, setCurrentQuestion] = useState(0);
+          const [answers, setAnswers] = useState([]);
+          const [testResults, setTestResults] = useState(null);
+          
+          const [config, setConfig] = useState(() => {
+            try {
+              const saved = localStorage.getItem('drivingSchoolConfig');
+              return saved ? JSON.parse(saved) : {
+                appName: 'Bonus Driving School',
+                logo: null,
+                primaryColor: '#EF4444',
+                secondaryColor: '#000000',
+                backgroundColor: '#FFFFFF'
+              };
+            } catch (error) {
+              console.error('Error loading config:', error);
+              return {
+                appName: 'Bonus Driving School',
+                logo: null,
+                primaryColor: '#EF4444',
+                secondaryColor: '#000000',
+                backgroundColor: '#FFFFFF'
+              };
+            }
+          });
+
+          const [questions, setQuestions] = useState(() => {
+            try {
+              const saved = localStorage.getItem('drivingSchoolQuestions');
+              return saved ? JSON.parse(saved) : defaultQuestions;
+            } catch (error) {
+              console.error('Error loading questions:', error);
+              return defaultQuestions;
+            }
+          });
+
+          const [testHistory, setTestHistory] = useState(() => {
+            try {
+              const saved = localStorage.getItem('drivingSchoolHistory');
+              return saved ? JSON.parse(saved) : {};
+            } catch (error) {
+              console.error('Error loading history:', error);
+              return {};
+            }
+          });
+
+          const [adminPassword] = useState('admin123');
+          const [isAdmin, setIsAdmin] = useState(false);
+          const [adminPage, setAdminPage] = useState('questions');
+          const [editingQuestion, setEditingQuestion] = useState(null);
+          const [selectedLicenseType, setSelectedLicenseType] = useState('code1');
+
+          useEffect(() => {
+            try {
+              localStorage.setItem('drivingSchoolQuestions', JSON.stringify(questions));
+            } catch (error) {
+              console.error('Error saving questions:', error);
+            }
+          }, [questions]);
+
+          useEffect(() => {
+            try {
+              localStorage.setItem('drivingSchoolHistory', JSON.stringify(testHistory));
+            } catch (error) {
+              console.error('Error saving history:', error);
+            }
+          }, [testHistory]);
+
+          useEffect(() => {
+            try {
+              localStorage.setItem('drivingSchoolConfig', JSON.stringify(config));
+            } catch (error) {
+              console.error('Error saving config:', error);
+            }
+          }, [config]);
+
+          const generateTest = (licenseType) => {
+            const allQuestions = [...questions[licenseType]];
+            const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, Math.min(130, shuffled.length));
+          };
+
+          const startTest = () => {
+            if (idNumber.trim().length < 5) {
+              alert('Please enter a valid ID number');
+              return;
+            }
+            const test = generateTest(selectedLicense);
+            setCurrentTest(test);
+            setAnswers(new Array(test.length).fill(null));
+            setCurrentQuestion(0);
+            setPage('test');
+          };
+
+          const submitAnswer = (answerIndex) => {
+            const newAnswers = [...answers];
+            newAnswers[currentQuestion] = answerIndex;
+            setAnswers(newAnswers);
+
+            if (currentQuestion < currentTest.length - 1) {
+              setCurrentQuestion(currentQuestion + 1);
+            } else {
+              finishTest(newAnswers);
+            }
+          };
+
+          const finishTest = (finalAnswers) => {
+            const results = currentTest.map((q, idx) => ({
+              question: q.question,
+              userAnswer: finalAnswers[idx],
+              correctAnswer: q.correct,
+              isCorrect: finalAnswers[idx] === q.correct,
+              options: q.options,
+              image: q.image
+            }));
+
+            const score = results.filter(r => r.isCorrect).length;
+            const percentage = ((score / results.length) * 100).toFixed(1);
+
+            const testRecord = {
+              date: new Date().toISOString(),
+              licenseType: selectedLicense,
+              score,
+              total: results.length,
+              percentage,
+              results
+            };
+
+            const history = { ...testHistory };
+            if (!history[idNumber]) {
+              history[idNumber] = [];
+            }
+            history[idNumber].push(testRecord);
+            setTestHistory(history);
+            setTestResults(testRecord);
+            setPage('results');
+          };
+
+          const addQuestion = () => {
+            const newId = Math.max(...questions[selectedLicenseType].map(q => q.id), 0) + 1;
+            const newQuestion = {
+              id: newId,
+              question: '',
+              options: ['', '', '', ''],
+              correct: 0,
+              image: null
+            };
+
+            setQuestions({
+              ...questions,
+              [selectedLicenseType]: [...questions[selectedLicenseType], newQuestion]
+            });
+            setEditingQuestion(newQuestion);
+          };
+
+          const deleteQuestion = (id) => {
+            if (confirm('Are you sure you want to delete this question?')) {
+              setQuestions({
+                ...questions,
+                [selectedLicenseType]: questions[selectedLicenseType].filter(q => q.id !== id)
+              });
+            }
+          };
+
+          const saveQuestion = (updatedQuestion) => {
+            setQuestions({
+              ...questions,
+              [selectedLicenseType]: questions[selectedLicenseType].map(q => 
+                q.id === updatedQuestion.id ? updatedQuestion : q
+              )
+            });
+            setEditingQuestion(null);
+          };
+
+          const handleImageUpload = (e, questionId) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                if (editingQuestion && editingQuestion.id === questionId) {
+                  setEditingQuestion({ ...editingQuestion, image: event.target.result });
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+
+          const handleLogoUpload = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => setConfig({ ...config, logo: event.target.result });
+              reader.readAsDataURL(file);
+            }
+          };
+
+          const renderHome = () => (
+            <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+                <h1 className="text-3xl font-bold text-white text-center">{config.appName}</h1>
+                {config.logo && <img src={config.logo} alt="Logo" className="mx-auto mt-4 h-20" />}
+              </div>
+              
+              <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+                <h2 className="text-2xl font-bold mb-8" style={{ color: config.secondaryColor }}>Choose Your License Type</h2>
+                
+                {['code1', 'code2', 'code3'].map((code) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      setSelectedLicense(code);
+                      setPage('id-input');
+                    }}
+                    className="w-full max-w-md p-6 rounded-lg text-white font-bold text-xl shadow-lg hover:opacity-90 transition"
+                    style={{ backgroundColor: config.primaryColor }}
+                  >
+                    <BookOpen className="inline mr-3" size={28} />
+                    {code.toUpperCase().replace('CODE', 'Code ')} License Test
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => {
+                    const pass = prompt('Enter admin password:');
+                    if (pass === adminPassword) {
+                      setIsAdmin(true);
+                      setPage('admin');
+                    } else if (pass) {
+                      alert('Incorrect password');
+                    }
+                  }}
+                  className="mt-8 p-3 rounded-lg text-white"
+                  style={{ backgroundColor: config.secondaryColor }}
+                >
+                  <Settings className="inline mr-2" size={20} />
+                  Admin Access
+                </button>
+              </div>
+            </div>
+          );
+
+          const renderIdInput = () => (
+            <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+                <button onClick={() => setPage('home')} className="text-white mb-2">
+                  <ArrowLeft size={24} />
+                </button>
+                <h1 className="text-2xl font-bold text-white text-center">{config.appName}</h1>
+              </div>
+              
+              <div className="flex-1 flex flex-col items-center justify-center p-6">
+                <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8 border-2" style={{ borderColor: config.primaryColor }}>
+                  <User className="mx-auto mb-4" size={48} style={{ color: config.primaryColor }} />
+                  <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: config.secondaryColor }}>
+                    Enter Your ID Number
+                  </h2>
+                  <input
+                    type="text"
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                    placeholder="ID Number"
+                    className="w-full p-4 border-2 rounded-lg mb-6 text-lg"
+                    style={{ borderColor: config.primaryColor }}
+                  />
+                  <button
+                    onClick={startTest}
+                    className="w-full p-4 rounded-lg text-white font-bold text-xl"
+                    style={{ backgroundColor: config.primaryColor }}
+                  >
+                    Start Test
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderTest = () => {
+            const question = currentTest[currentQuestion];
+            if (!question) {
+              return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+            }
+
+            return (
+              <div className="min-h-screen flex flex-col" style={{ backgroundColor: config.backgroundColor }}>
+                <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+                  <h1 className="text-xl font-bold text-white text-center">{config.appName}</h1>
+                  <div className="text-white text-center mt-2">
+                    Question {currentQuestion + 1} of {currentTest.length}
+                  </div>
+                  <div className="w-full bg-white rounded-full h-2 mt-2">
+                    <div 
+                      className="h-2 rounded-full transition-all"
+                      style={{ 
+                        backgroundColor: config.secondaryColor,
+                        width: `${((currentQuestion + 1) / currentTest.length) * 100}%`
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-6">
+                  <div className="max-w-2xl mx-auto">
+                    {question.image && (
+                      <img src={question.image} alt="Question" className="w-full rounded-lg mb-4" />
+                    )}
+                    <h2 className="text-xl font-bold mb-6" style={{ color: config.secondaryColor }}>
+                      {question.question}
+                    </h2>
+                    
+                    <div className="space-y-3">
+                      {question.options.map((option, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => submitAnswer(idx)}
+                          className="w-full p-4 rounded-lg text-left border-2 hover:opacity-80 transition font-medium"
+                          style={{ 
+                            borderColor: config.primaryColor,
+                            backgroundColor: answers[currentQuestion] === idx ? config.primaryColor : 'white',
+                            color: answers[currentQuestion] === idx ? 'white' : config.secondaryColor
+                          }}
+                        >
+                          {String.fromCharCode(65 + idx)}. {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          const renderResults = () => (
+            <div className="min-h-screen" style={{ backgroundColor: config.backgroundColor }}>
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+                <h1 className="text-2xl font-bold text-white text-center">{config.appName}</h1>
+              </div>
+              
+              <div className="p-6 max-w-4xl mx-auto">
+                <div className="bg-white rounded-lg shadow-lg p-8 mb-6 border-2" style={{ borderColor: config.primaryColor }}>
+                  <Award className="mx-auto mb-4" size={64} style={{ color: config.primaryColor }} />
+                  <h2 className="text-3xl font-bold text-center mb-4" style={{ color: config.secondaryColor }}>
+                    Test Complete!
+                  </h2>
+                  <div className="text-center mb-6">
+                    <div className="text-5xl font-bold mb-2" style={{ color: config.primaryColor }}>
+                      {testResults.percentage}%
+                    </div>
+                    <div className="text-xl" style={{ color: config.secondaryColor }}>
+                      {testResults.score} out of {testResults.total} correct
+                    </div>
+                  </div>
+                  
+                  {testResults.percentage >= 70 ? (
+                    <div className="text-center text-green-600 text-xl font-bold">
+                      <CheckCircle className="inline mr-2" size={28} />
+                      Congratulations! You passed!
+                    </div>
+                  ) : (
+                    <div className="text-center text-red-600 text-xl font-bold">
+                      <XCircle className="inline mr-2" size={28} />
+                      Keep practicing! You'll get there!
+                    </div>
+                  )}
+                </div>
+
+                <h3 className="text-2xl font-bold mb-4" style={{ color: config.secondaryColor }}>Review Your Answers</h3>
+                <div className="space-y-4">
+                  {testResults.results.map((result, idx) => (
+                    <div 
+                      key={idx}
+                      className="bg-white rounded-lg shadow p-4 border-l-4"
+                      style={{ borderColor: result.isCorrect ? '#10B981' : config.primaryColor }}
+                    >
+                      {result.image && (
+                        <img src={result.image} alt="Question" className="w-full rounded mb-2" />
+                      )}
+                      <div className="flex items-start">
+                        {result.isCorrect ? (
+                          <CheckCircle className="text-green-500 mr-2 flex-shrink-0 mt-1" size={20} />
+                        ) : (
+                          <XCircle className="mr-2 flex-shrink-0 mt-1" style={{ color: config.primaryColor }} size={20} />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-bold mb-2">{idx + 1}. {result.question}</p>
+                          <p className="mb-1">
+                            <span className="font-semibold">Your answer:</span>{' '}
+                            <span style={{ color: result.isCorrect ? '#10B981' : config.primaryColor }}>
+                              {result.options[result.userAnswer]}
+                            </span>
+                          </p>
+                          {!result.isCorrect && (
+                            <p>
+                              <span className="font-semibold">Correct answer:</span>{' '}
+                              <span className="text-green-600">{result.options[result.correctAnswer]}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPage('home');
+                    setIdNumber('');
+                    setSelectedLicense(null);
+                    setTestResults(null);
+                  }}
+                  className="w-full mt-6 p-4 rounded-lg text-white font-bold text-xl"
+                  style={{ backgroundColor: config.primaryColor }}
+                >
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          );
+
+          const renderAdmin = () => (
+            <div className="min-h-screen" style={{ backgroundColor: config.backgroundColor }}>
+              <div className="p-6" style={{ backgroundColor: config.primaryColor }}>
+                <button onClick={() => { setPage('home'); setIsAdmin(false); }} className="text-white mb-2">
+                  <ArrowLeft size={24} />
+                </button>
+                <h1 className="text-2xl font-bold text-white text-center">Admin Panel</h1>
+              </div>
+              <div className="p-6">
+                <div className="flex gap-2 mb-6 overflow-x-auto">
+                  {['questions', 'statistics', 'settings'].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setAdminPage(tab)}
+                      className="px-4 py-2 rounded font-bold capitalize whitespace-nowrap"
+                      style={{
+                        backgroundColor: adminPage === tab ? config.primaryColor : '#E5E7EB',
+                        color: adminPage === tab ? 'white' : config.secondaryColor
+                      }}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                {adminPage === 'questions' && (
+                  <div>
+                    <div className="mb-4 flex gap-2">
+                      {['code1', 'code2', 'code3'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => { setSelectedLicenseType(type); setEditingQuestion(null); }}
+                          className="px-4 py-2 rounded font-bold"
+                          style={{
+                            backgroundColor: selectedLicenseType === type ? config.primaryColor : '#E5E7EB',
+                            color: selectedLicenseType === type ? 'white' : config.secondaryColor
+                          }}
+                        >
+                          {type.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={addQuestion}
+                      className="mb-4 px-4 py-2 rounded text-white font-bold"
+                      style={{ backgroundColor: config.primaryColor }}
+                    >
+                      <Plus className="inline mr-2" size={20} />
+                      Add Question
+                    </button>
+
+                    <div className="text-lg font-bold mb-2">
+                      Total Questions: {questions[selectedLicenseType].length}
+                    </div>
+
+                    {editingQuestion ? (
+                      <div className="bg-white p-4 rounded-lg shadow mb-4">
+                        <h3 className="font-bold mb-2">Edit Question</h3>
+                        <textarea
+                          value={editingQuestion.question}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
+                          className="w-full p-2 border rounded mb-2"
+                          rows="3"
+                          placeholder="Question text"
+                        />
+                        {editingQuestion.options.map((opt, idx) => (
+                          <input
+                            key={idx}
+                            value={opt}
+                            onChange={(e) => {
+                              const newOpts = [...editingQuestion.options];
+                              newOpts[idx] = e.target.value;
+                              setEditingQuestion({ ...editingQuestion, options: newOpts });
+                            }}
+                            className="w-full p-2 border rounded mb-2"
+                            placeholder={`Option ${idx + 1}`}
+                          />
+                        ))}
+                        <select
+                          value={editingQuestion.correct}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, correct: parseInt(e.target.value) })}
+                          className="w-full p-2 border rounded mb-2"
+                        >
+                          {editingQuestion.options.map((_, idx) => (
+                            <option key={idx} value={idx}>Correct Answer: Option {idx + 1}</option>
+                          ))}
+                        </select>
+
+                        <div className="mb-2">
+                          <label className="block font-bold mb-1">Question Image (optional)</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, editingQuestion.id)}
+                            className="w-full p-2 border rounded"
+                          />
+                          {editingQuestion.image && (
+                            <img src={editingQuestion.image} alt="Preview" className="mt-2 max-w-xs rounded" />
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveQuestion(editingQuestion)}
+                            className="px-4 py-2 rounded text-white"
+                            style={{ backgroundColor: config.primaryColor }}
+                          >
+                            <Save className="inline mr-2" size={16} />
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingQuestion(null)}
+                            className="px-4 py-2 rounded bg-gray-500 text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {questions[selectedLicenseType].map((q) => (
+                          <div key={q.id} className="bg-white p-4 rounded-lg shadow flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-bold">{q.question}</p>
+                              {q.image && <Image className="inline ml-2 text-blue-500" size={16} />}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingQuestion(q)}
+                                className="p-2 rounded"
+                                style={{ backgroundColor: config.primaryColor, color: 'white' }}
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => deleteQuestion(q.id)}
+                                className="p-2 rounded bg-red-500 text-white"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {adminPage === 'statistics' && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4">Test Statistics</h2>
+                    {Object.keys(testHistory).length === 0 ? (
+                      <p>No test data available yet.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {Object.entries(testHistory).map(([id, tests]) => (
+                          <div key={id} className="bg-white p-4 rounded-lg shadow">
+                            <h3 className="font-bold text-lg mb-2">ID: {id}</h3>
+                            <p className="mb-2">Total Tests: {tests.length}</p>
+                            {tests.map((test, idx) => (
+                              <div key={idx} className="border-t pt-2 mt-2">
+                                <p><strong>Date:</strong> {new Date(test.date).toLocaleString()}</p>
+                                <p><strong>License:</strong> {test.licenseType.toUpperCase()}</p>
+                                <p><strong>Score:</strong> {test.score}/{test.total} ({test.percentage}%)</p>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {adminPage === 'settings' && (
+                  <div className="space-y-4">
+                    <div className="bg-white p-4 rounded-lg shadow">
+                      <label className="block font-bold mb-2">App Name</label>
+                      <input
+                        type="text"
+                        value={config.appName}
+                        onChange={(e) => setConfig({ ...config, appName: e.target.value })}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+                      <label className="block font-bold mb-2">Logo Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="w-full p-2 border rounded"
+                      />
+                      {config.logo && <img src={config.logo} alt="Logo" className="mt-2 h-20" />}
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+                      <label className="block font-bold mb-2">Primary Color</label>
+                      <input
+                        type="color"
+                        value={config.primaryColor}
+                        onChange={(e) => setConfig({ ...config, primaryColor: e.target.value })}
+                        className="w-full h-12 border rounded"
+                      />
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+                      <label className="block font-bold mb-2">Secondary Color</label>
+                      <input
+                        type="color"
+                        value={config.secondaryColor}
+                        onChange={(e) => setConfig({ ...config, secondaryColor: e.target.value })}
+                        className="w-full h-12 border rounded"
+                      />
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow">
+                      <label className="block font-bold mb-2">Background Color</label>
+                      <input
+                        type="color"
+                        value={config.backgroundColor}
+                        onChange={(e) => setConfig({ ...config, backgroundColor: e.target.value })}
+                        className="w-full h-12 border rounded"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+
+          // Main render with error handling
+          try {
+            return (
+              <>
+                {page === 'home' && renderHome()}
+                {page === 'id-input' && renderIdInput()}
+                {page === 'test' && renderTest()}
+                {page === 'results' && renderResults()}
+                {page === 'admin' && renderAdmin()}
+              </>
+            );
+          } catch (error) {
+            console.error('Render error:', error);
+            return (
+              <div className="min-h-screen flex items-center justify-center bg-red-50">
+                <div className="text-center p-6">
+                  <h2 className="text-2xl font-bold text-red-600 mb-4">Rendering Error</h2>
+                  <p className="mb-4">Something went wrong while rendering the page.</p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Reload Page
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        };
+
+        // Render the app with error boundary
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        );
+    </script>
+</body>
+</html>
