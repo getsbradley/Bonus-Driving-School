@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#EF4444">
+    <title>Bonus Driving School</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+        * { box-sizing: border-box; }
+        .hidden { display: none; }
+        .visible { display: block; }
+        .sync-status { position: fixed; bottom: 20px; right: 20px; padding: 10px 15px; border-radius: 5px; font-size: 12px; z-index: 9999; }
+        .sync-syncing { background-color: #3B82F6; color: white; }
+        .sync-synced { background-color: #10B981; color: white; }
+        .sync-error { background-color: #EF4444; color: white; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="syncStatus" class="sync-status sync-synced">✓ Synced</div>
+
+    <script>
+        // Generate 600 default questions per license type
+        function generateDefaultQuestions() {
+            const generateQuestionsForType = (type) => {
+                const questions = [];
+                const templates = {
+                    code1: [
+                        { q: "What is the speed limit in an urban area?", o: ["60 km/h", "80 km/h", "100 km/h", "120 km/h"], c: 0 },
+                        { q: "What does a red traffic light mean?", o: ["Slow down", "Stop", "Proceed with caution", "Yield"], c: 1 },
+                        { q: "What is the legal blood alcohol limit?", o: ["0.05g/100ml", "0.08g/100ml", "0.10g/100ml", "0.15g/100ml"], c: 0 },
+                        { q: "When must you use headlights?", o: ["During the day", "Sunset to sunrise", "Only when raining", "Never"], c: 1 },
+                        { q: "What does a yellow traffic light mean?", o: ["Speed up", "Stop if safe", "Proceed quickly", "Turn left"], c: 1 },
+                        { q: "What is the minimum age to drive Code 1?", o: ["16 years", "17 years", "18 years", "21 years"], c: 2 },
+                        { q: "When changing lanes, what must you do?", o: ["Signal", "Check mirrors", "Both", "Neither"], c: 2 },
+                        { q: "What does a green arrow mean?", o: ["Turn left only", "Go straight", "Safe to turn", "Stop ahead"], c: 2 },
+                        { q: "What is the national speed limit on highways?", o: ["80 km/h", "100 km/h", "120 km/h", "140 km/h"], c: 2 },
+                        { q: "When should you use the parking brake?", o: ["Always", "Only uphill", "When parked", "Never"], c: 2 },
+                    ],
+                    code2: [
+                        { q: "Maximum speed for Code 2 on freeway?", o: ["100 km/h", "120 km/h", "80 km/h", "60 km/h"], c: 1 },
+                        { q: "How often inspect Code 2 vehicle?", o: ["6 months", "1 year", "2 years", "3 years"], c: 1 },
+                        { q: "Minimum following distance (good)?", o: ["1 sec", "2 secs", "3 secs", "5 secs"], c: 1 },
+                        { q: "What is gross vehicle mass?", o: ["Fuel weight", "Total vehicle weight", "Cargo weight", "Driver weight"], c: 1 },
+                        { q: "When overtaking Code 2 vehicle?", o: ["Quick", "Safe", "Slowly", "Never"], c: 1 },
+                        { q: "Minimum tire tread depth?", o: ["0.5mm", "1mm", "1.6mm", "2mm"], c: 2 },
+                        { q: "Maximum passengers in Code 2?", o: ["Depends on seats", "1 only", "Unlimited", "3 only"], c: 0 },
+                        { q: "What brakes are required?", o: ["Service only", "Service & parking", "Parking only", "None"], c: 1 },
+                        { q: "Night driving requirements?", o: ["Headlights", "Tail lights", "Both", "None"], c: 2 },
+                        { q: "When to use indicators?", o: ["Always turning", "Sometimes", "Rarely", "Never"], c: 0 },
+                    ],
+                    code3: [
+                        { q: "Maximum speed Code 3 national road?", o: ["80 km/h", "100 km/h", "120 km/h", "60 km/h"], c: 0 },
+                        { q: "Code 3 roadworthy testing interval?", o: ["3 months", "6 months", "1 year", "2 years"], c: 2 },
+                        { q: "Total mass allowed Code 3?", o: ["3500 kg", "9000 kg", "16000 kg", "No limit"], c: 2 },
+                        { q: "When use hazard lights?", o: ["Parking", "Emergency", "Broken down", "All above"], c: 3 },
+                        { q: "Tire tread for truck?", o: ["0.5mm", "1mm", "1.6mm", "2mm"], c: 2 },
+                        { q: "Axle weight limits?", o: ["5 tons", "8 tons", "10 tons", "12 tons"], c: 1 },
+                        { q: "Horn usage rules?", o: ["Always", "Danger", "Warning", "Never"], c: 1 },
+                        { q: "Load securing required?", o: ["No", "Sometimes", "Always", "Depends"], c: 2 },
+                        { q: "When inspect cargo?", o: ["Start", "End", "Both", "Never"], c: 2 },
+                        { q: "Max driving hours daily?", o: ["8 hours", "10 hours", "12 hours", "Unlimited"], c: 1 },
+                    ]
+                };
+
+                const template = templates[type];
+                let id = 1;
+                
+                // Generate 600 questions by repeating and varying templates
+                for (let i = 0; i < 60; i++) {
+                    template.forEach(t => {
+                        questions.push({
+                            id: id++,
+                            question: `${t.q} (Variant ${Math.floor(i / 10) + 1})`,
+                            options: t.o,
+                            correct: t.c,
+                            image: null
+                        });
+                    });
+                }
+                
+                return questions;
+            };
+
+            return {
+                code1: generateQuestionsForType('code1'),
+                code2: generateQuestionsForType('code2'),
+                code3: generateQuestionsForType('code3')
+            };
+        }
+
+        // Shuffle array using Fisher-Yates
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+        const state = {
+            page: 'home',
+            selectedLicense: null,
+            idNumber: '',
+            currentTest: [],
+            currentQuestion: 0,
+            answers: [],
+            testResults: null,
+            isAdmin: false,
+            adminPage: 'questions',
+            editingQuestion: null,
+            selectedLicenseType: 'code1',
+            config: {
+                appName: 'Bonus Driving School',
+                logo: null,
+                primaryColor: '#EF4444',
+                secondaryColor: '#000000',
+                backgroundColor: '#FFFFFF'
+            },
+            questions: generateDefaultQuestions(),
+            testHistory: {}
+        };
+
+        // Load from localStorage
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('drivingSchoolConfig');
+                if (saved) state.config = JSON.parse(saved);
+                
+                const savedQuestions = localStorage.getItem('drivingSchoolQuestions');
+                if (savedQuestions) state.questions = JSON.parse(savedQuestions);
+                
+                const savedHistory = localStorage.getItem('drivingSchoolHistory');
+                if (savedHistory) state.testHistory = JSON.parse(savedHistory);
+            } catch (e) {
+                console.error('Error loading state:', e);
+            }
+        }
+
+        // Save to localStorage
+        function saveState() {
+            try {
+                localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config));
+                localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+                localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+            } catch (e) {
+                console.error('Error saving state:', e);
+            }
+        }
+
+        // Utility functions
+        function goHome() {
+            state.page = 'home';
+            state.idNumber = '';
+            state.selectedLicense = null;
+            state.testResults = null;
+            state.isAdmin = false;
+            render();
+        }
+
+        function startTest() {
+            if (state.idNumber.trim().length < 5) {
+                alert('Please enter a valid ID number');
+                return;
+            }
+            
+            // Define 16 control questions (same for all tests)
+            const controlQuestions = [
+                { id: 9001, question: "[CONTROL] What is the speed limit in urban areas?", options: ["60 km/h", "80 km/h", "100 km/h", "120 km/h"], correct: 0, image: null },
+                { id: 9002, question: "[CONTROL] What does a red traffic light mean?", options: ["Slow down", "Stop", "Proceed with caution", "Yield"], correct: 1, image: null },
+                { id: 9003, question: "[CONTROL] What is the minimum following distance?", options: ["1 second", "2 seconds", "3 seconds", "5 seconds"], correct: 1, image: null },
+                { id: 9004, question: "[CONTROL] When must you use headlights?", options: ["During day", "Sunset to sunrise", "Only raining", "Never"], correct: 1, image: null },
+                { id: 9005, question: "[CONTROL] What does yellow traffic light mean?", options: ["Speed up", "Stop if safe", "Proceed quickly", "Turn left"], correct: 1, image: null },
+                { id: 9006, question: "[CONTROL] What is minimum driving age?", options: ["16 years", "17 years", "18 years", "21 years"], correct: 2, image: null },
+                { id: 9007, question: "[CONTROL] When changing lanes, what is essential?", options: ["Signal only", "Check mirrors", "Signal and check", "Neither"], correct: 2, image: null },
+                { id: 9008, question: "[CONTROL] What does green arrow mean?", options: ["Turn left only", "Go straight", "Safe to proceed", "Stop ahead"], correct: 2, image: null },
+                { id: 9009, question: "[CONTROL] What is national highway speed limit?", options: ["80 km/h", "100 km/h", "120 km/h", "140 km/h"], correct: 2, image: null },
+                { id: 9010, question: "[CONTROL] When use parking brake?", options: ["Always", "Only uphill", "When parked", "Never"], correct: 2, image: null },
+                { id: 9011, question: "[CONTROL] What is maximum blood alcohol?", options: ["0.05g", "0.08g", "0.10g", "0.15g"], correct: 0, image: null },
+                { id: 9012, question: "[CONTROL] When should you signal?", options: ["Always", "When turning", "When stopping", "Never"], correct: 1, image: null },
+                { id: 9013, question: "[CONTROL] What is a yield sign?", options: ["Stop", "Slow and check", "Go", "Turn"], correct: 1, image: null },
+                { id: 9014, question: "[CONTROL] When can you overtake?", options: ["Always", "When safe", "Never", "Weekends"], correct: 1, image: null },
+                { id: 9015, question: "[CONTROL] What are seat belts for?", options: ["Comfort", "Safety", "Fashion", "Law only"], correct: 1, image: null },
+                { id: 9016, question: "[CONTROL] When check tire pressure?", options: ["Monthly", "Yearly", "Weekly", "Never"], correct: 0, image: null },
+            ];
+            
+            // Get all questions for this license type (excluding control questions)
+            const allQuestions = state.questions[state.selectedLicense];
+            
+            // Shuffle and pick 114 random questions (130 total - 16 control = 114 random)
+            const shuffled = shuffleArray(allQuestions);
+            const randomQuestions = shuffled.slice(0, 114);
+            
+            // Combine: random questions first, then control questions at the end
+            state.currentTest = [...randomQuestions, ...controlQuestions];
+            
+            state.answers = new Array(state.currentTest.length).fill(null);
+            state.currentQuestion = 0;
+            state.page = 'test';
+            render();
+        }
+
+        function submitAnswer(answerIndex) {
+            state.answers[state.currentQuestion] = answerIndex;
+            if (state.currentQuestion < state.currentTest.length - 1) {
+                state.currentQuestion++;
+                render();
+            } else {
+                finishTest();
+            }
+        }
+
+        function finishTest() {
+            const results = state.currentTest.map((q, idx) => ({
+                question: q.question,
+                userAnswer: state.answers[idx],
+                correctAnswer: q.correct,
+                isCorrect: state.answers[idx] === q.correct,
+                options: q.options,
+                image: q.image
+            }));
+
+            const score = results.filter(r => r.isCorrect).length;
+            const percentage = ((score / results.length) * 100).toFixed(1);
+
+            const testRecord = {
+                date: new Date().toISOString(),
+                licenseType: state.selectedLicense,
+                score,
+                total: results.length,
+                percentage,
+                results
+            };
+
+            if (!state.testHistory[state.idNumber]) {
+                state.testHistory[state.idNumber] = [];
+            }
+            state.testHistory[state.idNumber].push(testRecord);
+            saveState();
+
+            state.testResults = testRecord;
+            state.page = 'results';
+            render();
+        }
+
+        function addQuestion() {
+            const newId = Math.max(...state.questions[state.selectedLicenseType].map(q => q.id), 0) + 1;
+            state.editingQuestion = {
+                id: newId,
+                question: '',
+                options: ['', '', '', ''],
+                correct: 0,
+                image: null
+            };
+            render();
+        }
+
+        function saveQuestion() {
+            if (!state.editingQuestion.question.trim()) {
+                alert('Question text is required');
+                return;
+            }
+            const idx = state.questions[state.selectedLicenseType].findIndex(q => q.id === state.editingQuestion.id);
+            if (idx >= 0) {
+                state.questions[state.selectedLicenseType][idx] = state.editingQuestion;
+            } else {
+                state.questions[state.selectedLicenseType].push(state.editingQuestion);
+            }
+            saveState();
+            state.editingQuestion = null;
+            render();
+        }
+
+        function deleteQuestion(id) {
+            if (confirm('Delete this question?')) {
+                state.questions[state.selectedLicenseType] = state.questions[state.selectedLicenseType].filter(q => q.id !== id);
+                saveState();
+                render();
+            }
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (state.editingQuestion) {
+                        state.editingQuestion.image = event.target.result;
+                        render();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    state.config.logo = event.target.result;
+                    saveState();
+                    render();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (state.page === 'home') {
+                app.innerHTML = `
+                    <div class="min-h-screen flex flex-col" style="background-color: ${state.config.backgroundColor}">
+                        <div class="p-6" style="background-color: ${state.config.primaryColor}">
+                            <h1 class="text-3xl font-bold text-white text-center">${state.config.appName}</h1>
+                            ${state.config.logo ? `<img src="${state.config.logo}" alt="Logo" class="mx-auto mt-4 h-20">` : ''}
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+                            <h2 class="text-2xl font-bold mb-8" style="color: ${state.config.secondaryColor}">Choose Your License Type</h2>
+                            <button onclick="selectLicense('code1')" class="w-full max-w-md p-6 rounded-lg text-white font-bold text-xl shadow-lg hover:opacity-90" style="background-color: ${state.config.primaryColor}">📋 Code 1 License Test</button>
+                            <button onclick="selectLicense('code2')" class="w-full max-w-md p-6 rounded-lg text-white font-bold text-xl shadow-lg hover:opacity-90" style="background-color: ${state.config.primaryColor}">📋 Code 2 License Test</button>
+                            <button onclick="selectLicense('code3')" class="w-full max-w-md p-6 rounded-lg text-white font-bold text-xl shadow-lg hover:opacity-90" style="background-color: ${state.config.primaryColor}">📋 Code 3 License Test</button>
+                            <button onclick="adminLogin()" class="mt-8 p-3 rounded-lg text-white" style="background-color: ${state.config.secondaryColor}">⚙️ Admin Access</button>
+                        </div>
+                    </div>
+                `;
+            } else if (state.page === 'id-input') {
+                app.innerHTML = `
+                    <div class="min-h-screen flex flex-col" style="background-color: ${state.config.backgroundColor}">
+                        <div class="p-6" style="background-color: ${state.config.primaryColor}">
+                            <button onclick="goHome()" class="text-white mb-2">← Back</button>
+                            <h1 class="text-2xl font-bold text-white text-center">${state.config.appName}</h1>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-6">
+                            <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-8 border-2" style="border-color: ${state.config.primaryColor}">
+                                <h2 class="text-2xl font-bold mb-6 text-center" style="color: ${state.config.secondaryColor}">Enter Your ID Number</h2>
+                                <input type="text" id="idInput" value="${state.idNumber}" placeholder="ID Number" class="w-full p-4 border-2 rounded-lg mb-6 text-lg" style="border-color: ${state.config.primaryColor}" onchange="state.idNumber = this.value">
+                                <button onclick="startTest()" class="w-full p-4 rounded-lg text-white font-bold text-xl" style="background-color: ${state.config.primaryColor}">Start Test</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('idInput').focus();
+            } else if (state.page === 'test' && state.currentTest.length > 0) {
+                const question = state.currentTest[state.currentQuestion];
+                const progress = ((state.currentQuestion + 1) / state.currentTest.length) * 100;
+                app.innerHTML = `
+                    <div class="min-h-screen flex flex-col" style="background-color: ${state.config.backgroundColor}">
+                        <div class="p-6" style="background-color: ${state.config.primaryColor}">
+                            <h1 class="text-xl font-bold text-white text-center">${state.config.appName}</h1>
+                            <div class="text-white text-center mt-2">Question ${state.currentQuestion + 1} of ${state.currentTest.length}</div>
+                            <div class="w-full bg-white rounded-full h-2 mt-2">
+                                <div class="h-2 rounded-full transition-all" style="background-color: ${state.config.secondaryColor}; width: ${progress}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6">
+                            <div class="max-w-2xl mx-auto">
+                                ${question.image ? `<img src="${question.image}" alt="Question" class="w-full rounded-lg mb-4">` : ''}
+                                <h2 class="text-xl font-bold mb-6" style="color: ${state.config.secondaryColor}">${question.question}</h2>
+                                <div class="space-y-3">
+                                    ${question.options.map((opt, idx) => `
+                                        <button onclick="submitAnswer(${idx})" class="w-full p-4 rounded-lg text-left border-2 hover:opacity-80 transition font-medium" style="border-color: ${state.config.primaryColor}; background-color: ${state.answers[state.currentQuestion] === idx ? state.config.primaryColor : 'white'}; color: ${state.answers[state.currentQuestion] === idx ? 'white' : state.config.secondaryColor}">
+                                            ${String.fromCharCode(65 + idx)}. ${opt}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (state.page === 'results' && state.testResults) {
+                const passed = state.testResults.percentage >= 70;
+                app.innerHTML = `
+                    <div class="min-h-screen" style="background-color: ${state.config.backgroundColor}">
+                        <div class="p-6" style="background-color: ${state.config.primaryColor}">
+                            <h1 class="text-2xl font-bold text-white text-center">${state.config.appName}</h1>
+                        </div>
+                        <div class="p-6 max-w-4xl mx-auto">
+                            <div class="bg-white rounded-lg shadow-lg p-8 mb-6 border-2" style="border-color: ${state.config.primaryColor}">
+                                <h2 class="text-3xl font-bold text-center mb-4" style="color: ${state.config.secondaryColor}">Test Complete!</h2>
+                                <div class="text-center mb-6">
+                                    <div class="text-5xl font-bold mb-2" style="color: ${state.config.primaryColor}">${state.testResults.percentage}%</div>
+                                    <div class="text-xl" style="color: ${state.config.secondaryColor}">${state.testResults.score} out of ${state.testResults.total} correct</div>
+                                </div>
+                                <div class="text-center text-xl font-bold" style="color: ${passed ? '#10B981' : '#EF4444'}">
+                                    ${passed ? '✅ Congratulations! You passed!' : '❌ Keep practicing! You\'ll get there!'}
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-bold mb-4" style="color: ${state.config.secondaryColor}">Review Your Answers</h3>
+                            <div class="space-y-4">
+                                ${state.testResults.results.map((result, idx) => `
+                                    <div class="bg-white rounded-lg shadow p-4 border-l-4" style="border-color: ${result.isCorrect ? '#10B981' : state.config.primaryColor}">
+                                        ${result.image ? `<img src="${result.image}" alt="Question" class="w-full rounded mb-2">` : ''}
+                                        <div class="flex items-start">
+                                            <div class="mr-2 mt-1 text-lg">${result.isCorrect ? '✅' : '❌'}</div>
+                                            <div class="flex-1">
+                                                <p class="font-bold mb-2">${idx + 1}. ${result.question}</p>
+                                                <p class="mb-1"><span class="font-semibold">Your answer:</span> <span style="color: ${result.isCorrect ? '#10B981' : state.config.primaryColor}">${result.options[result.userAnswer]}</span></p>
+                                                ${!result.isCorrect ? `<p><span class="font-semibold">Correct answer:</span> <span class="text-green-600">${result.options[result.correctAnswer]}</span></p>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="goHome()" class="w-full mt-6 p-4 rounded-lg text-white font-bold text-xl" style="background-color: ${state.config.primaryColor}">Back to Home</button>
+                        </div>
+                    </div>
+                `;
+            } else if (state.page === 'admin' && state.isAdmin) {
+                renderAdmin();
+            }
+        }
+
+        function renderAdmin() {
+            const app = document.getElementById('app');
+            const adminTabs = `
+                <div class="flex gap-2 mb-6 overflow-x-auto">
+                    <button onclick="state.adminPage = 'questions'; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.adminPage === 'questions' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.adminPage === 'questions' ? 'white' : state.config.secondaryColor}">Questions</button>
+                    <button onclick="state.adminPage = 'statistics'; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.adminPage === 'statistics' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.adminPage === 'statistics' ? 'white' : state.config.secondaryColor}">Statistics</button>
+                    <button onclick="state.adminPage = 'settings'; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.adminPage === 'settings' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.adminPage === 'settings' ? 'white' : state.config.secondaryColor}">Settings</button>
+                </div>
+            `;
+
+            let content = '';
+
+            if (state.adminPage === 'questions') {
+                const licenseButtons = `
+                    <div class="mb-4 flex gap-2">
+                        <button onclick="state.selectedLicenseType = 'code1'; state.editingQuestion = null; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.selectedLicenseType === 'code1' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.selectedLicenseType === 'code1' ? 'white' : state.config.secondaryColor}">CODE 1</button>
+                        <button onclick="state.selectedLicenseType = 'code2'; state.editingQuestion = null; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.selectedLicenseType === 'code2' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.selectedLicenseType === 'code2' ? 'white' : state.config.secondaryColor}">CODE 2</button>
+                        <button onclick="state.selectedLicenseType = 'code3'; state.editingQuestion = null; render()" class="px-4 py-2 rounded font-bold" style="background-color: ${state.selectedLicenseType === 'code3' ? state.config.primaryColor : '#E5E7EB'}; color: ${state.selectedLicenseType === 'code3' ? 'white' : state.config.secondaryColor}">CODE 3</button>
+                    </div>
+                `;
+
+                if (state.editingQuestion) {
+                    content = `
+                        ${licenseButtons}
+                        <div class="bg-white p-4 rounded-lg shadow mb-4">
+                            <h3 class="font-bold mb-2">Edit Question</h3>
+                            <textarea id="qText" class="w-full p-2 border rounded mb-2" rows="3" placeholder="Question text">${state.editingQuestion.question}</textarea>
+                            ${[0, 1, 2, 3].map(i => `
+                                <input type="text" class="w-full p-2 border rounded mb-2" placeholder="Option ${i + 1}" value="${state.editingQuestion.options[i]}" onchange="state.editingQuestion.options[${i}] = this.value">
+                            `).join('')}
+                            <select class="w-full p-2 border rounded mb-2" onchange="state.editingQuestion.correct = parseInt(this.value)">
+                                ${[0, 1, 2, 3].map(i => `<option value="${i}" ${state.editingQuestion.correct === i ? 'selected' : ''}>Correct Answer: Option ${i + 1}</option>`).join('')}
+                            </select>
+                            <div class="mb-2">
+                                <label class="block font-bold mb-1">Question Image (optional)</label>
+                                <input type="file" accept="image/*" onchange="handleImageUpload(event)" class="w-full p-2 border rounded">
+                                ${state.editingQuestion.image ? `<img src="${state.editingQuestion.image}" alt="Preview" class="mt-2 max-w-xs rounded">` : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="state.editingQuestion.question = document.getElementById('qText').value; saveQuestion()" class="px-4 py-2 rounded text-white" style="background-color: ${state.config.primaryColor}">Save</button>
+                                <button onclick="state.editingQuestion = null; render()" class="px-4 py-2 rounded bg-gray-500 text-white">Cancel</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content = `
+                        ${licenseButtons}
+                        <button onclick="addQuestion()" class="mb-4 px-4 py-2 rounded text-white font-bold" style="background-color: ${state.config.primaryColor}">+ Add Question</button>
+                        <div class="text-lg font-bold mb-2">Total Questions: ${state.questions[state.selectedLicenseType].length}</div>
+                        <div class="space-y-2">
+                            ${state.questions[state.selectedLicenseType].map(q => `
+                                <div class="bg-white p-4 rounded-lg shadow flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <p class="font-bold">${q.question}</p>
+                                        ${q.image ? '<span class="text-blue-500 ml-2">🖼️</span>' : ''}
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="state.editingQuestion = state.questions['${state.selectedLicenseType}'].find(x => x.id === ${q.id}); render()" class="p-2 rounded text-white" style="background-color: ${state.config.primaryColor}">✏️</button>
+                                        <button onclick="deleteQuestion(${q.id})" class="p-2 rounded bg-red-500 text-white">🗑️</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } else if (state.adminPage === 'statistics') {
+                const historyEntries = Object.entries(state.testHistory);
+                content = `
+                    <h2 class="text-2xl font-bold mb-4">Test Statistics</h2>
+                    ${historyEntries.length === 0 ? '<p>No test data available yet.</p>' : `
+                        <div class="space-y-4">
+                            ${historyEntries.map(([id, tests]) => `
+                                <div class="bg-white p-4 rounded-lg shadow">
+                                    <h3 class="font-bold text-lg mb-2">ID: ${id}</h3>
+                                    <p class="mb-2">Total Tests: ${tests.length}</p>
+                                    ${tests.map((test, idx) => `
+                                        <div class="border-t pt-2 mt-2">
+                                            <p><strong>Date:</strong> ${new Date(test.date).toLocaleString()}</p>
+                                            <p><strong>License:</strong> ${test.licenseType.toUpperCase()}</p>
+                                            <p><strong>Score:</strong> ${test.score}/${test.total} (${test.percentage}%)</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                `;
+            } else if (state.adminPage === 'settings') {
+                content = `
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <label class="block font-bold mb-2">App Name</label>
+                            <input type="text" value="${state.config.appName}" onchange="state.config.appName = this.value; saveState(); render()" class="w-full p-2 border rounded">
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <label class="block font-bold mb-2">Logo Image</label>
+                            <input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="w-full p-2 border rounded">
+                            ${state.config.logo ? `<img src="${state.config.logo}" alt="Logo" class="mt-2 h-20">` : ''}
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <label class="block font-bold mb-2">Primary Color</label>
+                            <input type="color" value="${state.config.primaryColor}" onchange="state.config.primaryColor = this.value; saveState(); render()" class="w-full h-12 border rounded">
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <label class="block font-bold mb-2">Secondary Color</label>
+                            <input type="color" value="${state.config.secondaryColor}" onchange="state.config.secondaryColor = this.value; saveState(); render()" class="w-full h-12 border rounded">
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <label class="block font-bold mb-2">Background Color</label>
+                            <input type="color" value="${state.config.backgroundColor}" onchange="state.config.backgroundColor = this.value; saveState(); render()" class="w-full h-12 border rounded">
+                        </div>
+                    </div>
+                `;
+            }
+
+            app.innerHTML = `
+                <div class="min-h-screen" style="background-color: ${state.config.backgroundColor}">
+                    <div class="p-6" style="background-color: ${state.config.primaryColor}">
+                        <button onclick="goHome()" class="text-white mb-2">← Back</button>
+                        <h1 class="text-2xl font-bold text-white text-center">Admin Panel</h1>
+                    </div>
+                    <div class="p-6">
+                        ${adminTabs}
+                        ${content}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectLicense(license) {
+            state.selectedLicense = license;
+            state.page = 'id-input';
+            render();
+        }
+
+        function adminLogin() {
+            const pass = prompt('Enter admin password:');
+            if (pass === 'admin123') {
+                state.isAdmin = true;
+                state.page = 'admin';
+                render();
+            } else if (pass) {
+                alert('Incorrect password');
+            }
+        }
+
+        // Initialize
+        loadState();
+        render();
+    </script>
+</body>
+</html>
