@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#EF4444">
+  <title>Bonus Driving School — Classic (Patched)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
+  <style>
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .login-fade { animation: fadeIn 360ms ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="syncStatus" class="fixed right-5 bottom-5 px-3 py-2 rounded text-white" style="background:#10B981">✓ Synced</div>
+
+<script>
+// Firebase config (kept identical to your original)
+const firebaseConfig = {
+  apiKey: "AIzaSyD4En5Xe4HKjUd0LYrsmHHeV2ZjFyjxnBU",
+  authDomain: "bonus-driving-school-aabd2.firebaseapp.com",
+  projectId: "bonus-driving-school-aabd2",
+  storageBucket: "bonus-driving-school-aabd2.firebasestorage.app",
+  messagingSenderId: "72558421307",
+  appId: "1:72558421307:web:e9d3450e78e8d4e13d431e",
+  measurementId: "G-WT9KQ340DG"
+};
+let db=null, storage=null, firebaseInitialized=false;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  storage = firebase.storage();
+  firebaseInitialized=true;
+} catch(e){ console.error('Firebase init',e); }
+
+function updateSyncStatus(type,msg=''){ const el=document.getElementById('syncStatus'); if(!el) return; if(type==='syncing'){ el.style.background='#3B82F6'; el.textContent='🔄 Syncing...'; } else if(type==='synced'){ el.style.background='#10B981'; el.textContent='✓ Synced'; } else { el.style.background='#EF4444'; el.textContent=msg||'⚠ Error'; } }
+
+function shuffleArray(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+const state = {
+  page:'home', selectedLicense:null, idNumber:'', currentTest:[], currentQuestion:0, answers:[], testResults:null,
+  isAdmin:false, adminPage:'questions', editingQuestion:null, selectedLicenseType:'code1',
+  config:{ appName:'Bonus Driving School', logo:null, primaryColor:'#EF4444', secondaryColor:'#000000', backgroundColor:'#FFFFFF' },
+  questions:null, testHistory:{}
+};
+
+function generateDefaultQuestions(){
+  return { code1:[ {id:1,question:'What is the speed limit in an urban area?', options:['60 km/h','80 km/h','100 km/h','120 km/h'], correct:0, image:null } ], code2:[], code3:[] };
+}
+function defaultControlQuestions(){
+  return [
+    { id:9001, question:'[CONTROL] What is the speed limit in urban areas?', options:['60 km/h','80 km/h','100 km/h','120 km/h'], correct:0, image:null },
+    { id:9002, question:'[CONTROL] What does a red traffic light mean?', options:['Slow down','Stop','Proceed with caution','Yield'], correct:1, image:null }
+  ];
+}
+
+async function loadState(){
+  try{
+    const saved = localStorage.getItem('drivingSchoolQuestions');
+    if(saved) state.questions = JSON.parse(saved);
+    const cfgSaved = localStorage.getItem('drivingSchoolConfig');
+    if(cfgSaved) state.config = JSON.parse(cfgSaved);
+    const historySaved = localStorage.getItem('drivingSchoolHistory');
+    if(historySaved) state.testHistory = JSON.parse(historySaved);
+    if(firebaseInitialized){
+      updateSyncStatus('syncing');
+      const qDoc = await db.collection('data').doc('questions').get();
+      if(qDoc.exists){ state.questions = qDoc.data(); localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions)); }
+      else { state.questions = { ...generateDefaultQuestions(), control: defaultControlQuestions() }; await saveState(); }
+      const cfgDoc = await db.collection('config').doc('appConfig').get();
+      if(cfgDoc.exists){ state.config = cfgDoc.data(); localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config)); }
+      updateSyncStatus('synced');
+      db.collection('data').doc('questions').onSnapshot(doc=>{ if(doc.exists){ state.questions = doc.data(); localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions)); if(state.page==='admin' && state.adminPage==='questions') render(); } });
+      db.collection('config').doc('appConfig').onSnapshot(doc=>{ if(doc.exists){ state.config = doc.data(); localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config)); if(state.page!=='test') render(); } });
+    } else {
+      if(!state.questions) state.questions = { ...generateDefaultQuestions(), control: defaultControlQuestions() };
+      updateSyncStatus('offline','📴 Offline');
+    }
+  }catch(e){ console.error('loadState',e); updateSyncStatus('error','Load failed'); if(!state.questions) state.questions = { ...generateDefaultQuestions(), control: defaultControlQuestions() }; }
+  render();
+}
+
+async function saveState(){
+  try{
+    localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+    localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config));
+    localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+    if(firebaseInitialized){
+      updateSyncStatus('syncing');
+      const questionsForFirestore = {};
+      for(const k in state.questions){ questionsForFirestore[k]=state.questions[k].map(q=>{ if(q.image && q.image.startsWith('data:image')) return {...q, image:`storage:questions/${k}/${q.id}`}; return q; }); }
+      await db.collection('data').doc('questions').set(questionsForFirestore);
+      await db.collection('config').doc('appConfig').set(state.config);
+      updateSyncStatus('synced');
+    }
+  }catch(e){ console.error('saveState',e); updateSyncStatus('error','Save failed'); }
+}
+
+async function uploadImageBase64(licenseType, questionId, base64){
+  if(!firebaseInitialized) return null;
+  try{
+    const ref = storage.ref(`questions/${licenseType}/${questionId}`);
+    const blob = await (await fetch(base64)).blob();
+    await ref.put(blob);
+    return await ref.getDownloadURL();
+  } catch(e){ console.error('upload',e); return null; }
+}
+
+function goHome(){ state.page='home'; state.selectedLicense=null; state.idNumber=''; state.testResults=null; state.isAdmin=false; render(); }
+function selectLicense(license){ state.selectedLicense=license; state.page='id-input'; render(); }
+function showAdminLogin(){ state.page='admin-login'; render(); }
+
+function startTest(){
+  if(state.idNumber.trim().length<5){ alert('Please enter a valid ID number'); return; }
+  const controlQuestions = state.questions.control || defaultControlQuestions();
+  const allQuestions = state.questions[state.selectedLicense] || [];
+  const shuffled = shuffleArray(allQuestions).slice(0, Math.max(0,114));
+  state.currentTest = [...shuffled, ...controlQuestions];
+  state.answers = new Array(state.currentTest.length).fill(null);
+  state.currentQuestion = 0;
+  state.page='test';
+  render();
+}
+
+function submitAnswer(idx){ state.answers[state.currentQuestion]=idx; if(state.currentQuestion < state.currentTest.length-1){ state.currentQuestion++; render(); } else finishTest(); }
+
+function finishTest(){
+  const results = state.currentTest.map((q, i)=>({ question:q.question, userAnswer:state.answers[i], correctAnswer:q.correct, isCorrect: state.answers[i]===q.correct, options:q.options, image:q.image }));
+  const score = results.filter(r=>r.isCorrect).length;
+  const percentage = ((score/results.length)*100).toFixed(1);
+  const record = { date:new Date().toISOString(), licenseType:state.selectedLicense, score, total:results.length, percentage, results };
+  if(!state.testHistory[state.idNumber]) state.testHistory[state.idNumber]=[];
+  state.testHistory[state.idNumber].push(record);
+  localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+  if(firebaseInitialized) saveTestHistory(state.idNumber, record);
+  state.testResults=record; state.page='results'; render();
+}
+
+async function saveTestHistory(idNumber, testRecord){
+  if(!firebaseInitialized) return;
+  try{ await db.collection('testHistory').doc(idNumber).set({ tests: state.testHistory[idNumber], lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true }); } catch(e){ console.error('history save',e); }
+}
+
+// Admin login handling
+function tryAdminLogin(pw){
+  const card = document.getElementById('adminCard');
+  if(pw==='admin123'){ state.isAdmin=true; state.page='admin'; render(); } else { if(card){ card.classList.add('animate-shake'); setTimeout(()=>card.classList.remove('animate-shake'),600); } alert('Incorrect password'); }
+}
+
+// CRUD for questions
+function addQuestion(){ const newId = Date.now(); state.editingQuestion = { id:newId, question:'', options:['','','',''], correct:0, image:null }; render(); }
+function saveQuestion(){ const q = state.editingQuestion; if(!q.question.trim()){ alert('Question text is required'); return; } const arr = state.questions[state.selectedLicenseType] = state.questions[state.selectedLicenseType] || []; const idx = arr.findIndex(x=>x.id===q.id); if(idx>=0) arr[idx]=q; else arr.push(q); state.editingQuestion=null; saveState(); render(); }
+async function handleImageForEditing(e){ const file = e.target.files[0]; if(!file) return; if(file.size > 5*1024*1024){ alert('Image too large'); return; } const reader = new FileReader(); reader.onload = async ev => { if(!state.editingQuestion) return; state.editingQuestion.image = ev.target.result; const url = await uploadImageBase64(state.selectedLicenseType, state.editingQuestion.id, state.editingQuestion.image); if(url) state.editingQuestion.imageUrl = url; render(); }; reader.readAsDataURL(file); }
+function deleteQuestion(id){ if(confirm('Delete this question?')){ state.questions[state.selectedLicenseType] = (state.questions[state.selectedLicenseType]||[]).filter(q=>q.id!==id); saveState(); render(); } }
+function startEdit(id){ state.editingQuestion = (state.questions[state.selectedLicenseType]||[]).find(x=>x.id===id); render(); }
+
+// Pickr
+let pickrPrimary, pickrSecondary, pickrBackground;
+function initPickrs(){
+  if(window._pickrInitialized) return; window._pickrInitialized=true;
+  const PickrClass = window.Pickr;
+  pickrPrimary = PickrClass.create({ el: '.pickr-primary', theme:'classic', default: state.config.primaryColor, components:{preview:true, opacity:false, hue:true, interaction:{hex:true, rgba:false,input:true,save:true}} });
+  pickrSecondary = PickrClass.create({ el: '.pickr-secondary', theme:'classic', default: state.config.secondaryColor, components:{preview:true, opacity:false, hue:true, interaction:{hex:true,input:true,save:true}} });
+  pickrBackground = PickrClass.create({ el: '.pickr-background', theme:'classic', default: state.config.backgroundColor, components:{preview:true, opacity:false, hue:true, interaction:{hex:true,input:true,save:true}} });
+  pickrPrimary.on('save', (color)=>{ state.config.primaryColor = color.toHEXA().toString(); pickrPrimary.hide(); saveState(); render(); });
+  pickrSecondary.on('save', (color)=>{ state.config.secondaryColor = color.toHEXA().toString(); pickrSecondary.hide(); saveState(); render(); });
+  pickrBackground.on('save', (color)=>{ state.config.backgroundColor = color.toHEXA().toString(); pickrBackground.hide(); saveState(); render(); });
+}
+
+// Render
+function render(){
+  const app = document.getElementById('app');
+  document.body.style.background = state.config.backgroundColor || '#fff';
+  if(state.page==='home'){
+    app.innerHTML = `
+      <div class="min-h-screen flex flex-col" style="background:${state.config.backgroundColor}">
+        <div class="p-6" style="background:${state.config.primaryColor}">
+          <h1 class="text-3xl font-bold text-white text-center">${state.config.appName}</h1>
+          ${state.config.logo?`<img src="${state.config.logo}" class="mx-auto mt-4 h-20">`:''}
+        </div>
+        <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+          <h2 class="text-2xl font-bold" style="color:${state.config.secondaryColor}">Choose Your License Type</h2>
+          <div class="w-full max-w-md space-y-3">
+            <button onclick="selectLicense('code1')" class="w-full p-4 rounded text-white font-bold" style="background:${state.config.primaryColor}">📋 Code 1 License Test</button>
+            <button onclick="selectLicense('code2')" class="w-full p-4 rounded text-white font-bold" style="background:${state.config.primaryColor}">📋 Code 2 License Test</button>
+            <button onclick="selectLicense('code3')" class="w-full p-4 rounded text-white font-bold" style="background:${state.config.primaryColor}">📋 Code 3 License Test</button>
+            <button onclick="showAdminLogin()" class="mt-4 p-3 rounded text-white" style="background:${state.config.secondaryColor}">⚙️ Admin Access</button>
+          </div>
+        </div>
+      </div>`;
+  } else if(state.page==='id-input'){
+    app.innerHTML = `
+      <div class="min-h-screen">
+        <div class="p-6" style="background:${state.config.primaryColor}"><button onclick="goHome()" class="text-white">← Back</button></div>
+        <div class="flex items-center justify-center p-6">
+          <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-8 border-2" style="border-color:${state.config.primaryColor}">
+            <h2 class="text-2xl font-bold mb-6" style="color:${state.config.secondaryColor}">Enter Your ID Number</h2>
+            <input id="idInput" type="text" value="${state.idNumber}" class="w-full p-4 border-2 rounded mb-4" style="border-color:${state.config.primaryColor}" onchange="state.idNumber=this.value">
+            <button onclick="startTest()" class="w-full p-4 rounded text-white" style="background:${state.config.primaryColor}">Start Test</button>
+          </div>
+        </div>
+      </div>`;
+    setTimeout(()=>{ const el=document.getElementById('idInput'); if(el) el.focus(); },50);
+  } else if(state.page==='test' && state.currentTest.length>0){
+    const q = state.currentTest[state.currentQuestion];
+    const progress = ((state.currentQuestion+1)/state.currentTest.length)*100;
+    app.innerHTML = `
+      <div class="min-h-screen">
+        <div class="p-6" style="background:${state.config.primaryColor}">
+          <h1 class="text-xl font-bold text-white text-center">${state.config.appName}</h1>
+          <div class="text-white text-center mt-2">Question ${state.currentQuestion+1} of ${state.currentTest.length}</div>
+          <div class="w-full bg-white rounded-full h-2 mt-2"><div class="h-2 rounded-full" style="background:${state.config.secondaryColor}; width:${progress}%"></div></div>
+        </div>
+        <div class="p-6 max-w-3xl mx-auto">
+          ${q.image?`<img src="${q.image}" class="w-full rounded mb-4">`:''}
+          <h2 class="text-xl font-bold mb-4" style="color:${state.config.secondaryColor}">${q.question}</h2>
+          <div class="space-y-3">
+            ${q.options.map((opt,idx)=>`<button onclick="submitAnswer(${idx})" class="w-full p-4 rounded border-2 text-left" style="border-color:${state.config.primaryColor}; background:${state.answers[state.currentQuestion]===idx?state.config.primaryColor:'white'}; color:${state.answers[state.currentQuestion]===idx?'white':state.config.secondaryColor}">${String.fromCharCode(65+idx)}. ${opt}</button>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  } else if(state.page==='results' && state.testResults){
+    const passed = state.testResults.percentage >= 70;
+    app.innerHTML = `
+      <div class="min-h-screen p-6">
+        <div class="p-6" style="background:${state.config.primaryColor}"><h1 class="text-2xl font-bold text-white text-center">${state.config.appName}</h1></div>
+        <div class="p-6 max-w-4xl mx-auto">
+          <div class="bg-white rounded-lg shadow-lg p-8 mb-6 border-2" style="border-color:${state.config.primaryColor}">
+            <h2 class="text-3xl font-bold text-center mb-4" style="color:${state.config.secondaryColor}">Test Complete!</h2>
+            <div class="text-center mb-6"><div class="text-5xl font-bold mb-2" style="color:${state.config.primaryColor}">${state.testResults.percentage}%</div><div>${state.testResults.score} out of ${state.testResults.total}</div></div>
+            <div class="text-center text-xl font-bold" style="color:${passed? '#10B981' : '#EF4444'}">${passed? '✅ Passed' : '❌ Not Passed'}</div>
+          </div>
+          <button onclick="goHome()" class="w-full p-4 rounded text-white" style="background:${state.config.primaryColor}">Back to Home</button>
+        </div>
+      </div>`;
+  } else if(state.page==='admin-login'){
+    app.innerHTML = `
+      <div class="min-h-screen flex items-center justify-center" style="background: rgba(0,0,0,0.18)">
+        <div id="adminCard" class="login-fade bg-white rounded-xl shadow-xl p-8 w-full max-w-sm text-center">
+          ${state.config.logo?`<img src="${state.config.logo}" class="mx-auto h-16 mb-4">`:''}
+          <h3 class="text-xl font-bold mb-4">Admin Panel</h3>
+          <input id="adminPw" type="password" placeholder="Password" class="w-full p-3 border rounded mb-4" />
+          <div class="flex gap-2">
+            <button onclick="tryAdminLogin(document.getElementById('adminPw').value)" class="flex-1 p-3 rounded text-white" style="background:${state.config.primaryColor}">Login</button>
+            <button onclick="goHome()" class="flex-0 p-3 rounded border" style="border-color:${state.config.primaryColor}">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  } else if(state.page==='admin' && state.isAdmin){
+    renderAdmin();
+  } else {
+    app.innerHTML = `<div class="p-6">Unknown page</div>`;
+  }
+  setTimeout(()=>initPickrs(),200);
+}
+
+function renderAdmin(){
+  const app = document.getElementById('app');
+  const adminTabs = `<div class="flex gap-2 mb-6 overflow-x-auto"><button onclick="state.adminPage='questions'; render()" class="px-4 py-2 rounded font-bold" style="background:${state.adminPage==='questions'?state.config.primaryColor:'#E5E7EB'}; color:${state.adminPage==='questions'?'white':state.config.secondaryColor}">Questions</button><button onclick="state.adminPage='statistics'; render()" class="px-4 py-2 rounded font-bold" style="background:${state.adminPage==='statistics'?state.config.primaryColor:'#E5E7EB'}; color:${state.adminPage==='statistics'?'white':state.config.secondaryColor}">Statistics</button><button onclick="state.adminPage='settings'; render()" class="px-4 py-2 rounded font-bold" style="background:${state.adminPage==='settings'?state.config.primaryColor:'#E5E7EB'}; color:${state.adminPage==='settings'?'white':state.config.secondaryColor}">Settings</button></div>`;
+
+  let content='';
+  if(state.adminPage==='questions'){
+    const licenseButtons = `<div class="mb-4 flex gap-2">${['code1','code2','code3','control'].map(t=>`<button onclick="state.selectedLicenseType='${t}'; state.editingQuestion=null; render();" class="px-4 py-2 rounded font-bold" style="background:${state.selectedLicenseType===t?state.config.primaryColor:'#E5E7EB'}; color:${state.selectedLicenseType===t?'white':state.config.secondaryColor}">${t.toUpperCase()}</button>`).join('')}</div>`;
+
+    if(state.editingQuestion){
+      const q = state.editingQuestion;
+      content = `${licenseButtons}<div class="bg-white p-4 rounded-lg shadow mb-4"><h3 class="font-bold mb-2">Edit Question</h3><textarea id="qText" class="w-full p-2 border rounded mb-2" rows="3">${q.question}</textarea>${[0,1,2,3].map(i=>`<input type="text" class="w-full p-2 border rounded mb-2" placeholder="Option ${i+1}" value="${q.options[i] || ''}" onchange="state.editingQuestion.options[${i}]=this.value">`).join('')}<select class="w-full p-2 border rounded mb-2" onchange="state.editingQuestion.correct=parseInt(this.value)">${[0,1,2,3].map(i=>`<option value="${i}" ${q.correct===i?'selected':''}>Correct Answer: Option ${i+1}</option>`).join('')}</select><div class="mb-2"><label class="block font-bold mb-1">Question Image (optional)</label><input type="file" accept="image/*" onchange="handleImageForEditing(event)" class="w-full p-2 border rounded">${q.image?`<img src="${q.image}" class="mt-2 max-w-xs rounded">`:''}</div><div class="flex gap-2"><button onclick="state.editingQuestion.question=document.getElementById('qText').value; saveQuestion()" class="px-4 py-2 rounded text-white" style="background:${state.config.primaryColor}">Save</button><button onclick="state.editingQuestion=null; render()" class="px-4 py-2 rounded bg-gray-500 text-white">Cancel</button></div></div>`;
+    } else {
+      const listHtml = (state.questions[state.selectedLicenseType]||[]).map(q=>{
+        return `<div class="bg-white p-4 rounded-lg shadow flex justify-between items-start"><div class="flex-1"><p class="font-bold">${q.question}</p>${q.image?'<span class="text-blue-500 ml-2">🖼️</span>':''}</div><div class="flex gap-2"><button onclick="startEdit(${q.id})" class="p-2 rounded text-white" style="background:${state.config.primaryColor}">✏️</button><button onclick="deleteQuestion(${q.id})" class="p-2 rounded bg-red-500 text-white">🗑️</button></div></div>`;
+      }).join('');
+      content = `${licenseButtons}<button onclick="addQuestion()" class="mb-4 px-4 py-2 rounded text-white font-bold" style="background:${state.config.primaryColor}">+ Add Question</button><div class="text-lg font-bold mb-2">Total Questions: ${(state.questions[state.selectedLicenseType]||[]).length}</div><div class="space-y-2">${listHtml}</div>`;
+    }
+  } else if(state.adminPage==='statistics'){
+    const historyEntries = Object.entries(state.testHistory);
+    content = `<h2 class="text-2xl font-bold mb-4">Test Statistics</h2>${historyEntries.length===0?'<p>No test data available yet.</p>': historyEntries.map(([id,tests])=>`<div class="bg-white p-4 rounded-lg shadow mb-4"><h3 class="font-bold text-lg mb-2">ID: ${id}</h3><p class="mb-2">Total Tests: ${tests.length}</p>${tests.map((test,idx)=>`<div class="border-t pt-2 mt-2"><p><strong>Date:</strong> ${new Date(test.date).toLocaleString()}</p><p><strong>License:</strong> ${test.licenseType.toUpperCase()}</p><p><strong>Score:</strong> ${test.score}/${test.total} (${test.percentage}%)</p></div>`).join('')}</div>`).join('');
+  } else if(state.adminPage==='settings'){
+    content = `<div class="space-y-4"><div class="bg-white p-4 rounded-lg shadow"><label class="block font-bold mb-2">App Name</label><input type="text" value="${state.config.appName}" onchange="state.config.appName=this.value; saveState(); render()" class="w-full p-2 border rounded"></div><div class="bg-white p-4 rounded-lg shadow"><label class="block font-bold mb-2">Logo Image</label><input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="w-full p-2 border rounded">${state.config.logo?`<img src="${state.config.logo}" class="mt-2 h-20">`:''}</div><div class="bg-white p-4 rounded-lg shadow"><label class="block font-bold mb-2">Primary Color</label><div class="flex items-center gap-2"><div class="pickr-primary"></div><button class="ml-2 px-3 py-2 rounded" onclick="pickrPrimary.show()">Open</button></div></div><div class="bg-white p-4 rounded-lg shadow"><label class="block font-bold mb-2">Secondary Color</label><div class="flex items-center gap-2"><div class="pickr-secondary"></div><button class="ml-2 px-3 py-2 rounded" onclick="pickrSecondary.show()">Open</button></div></div><div class="bg-white p-4 rounded-lg shadow"><label class="block font-bold mb-2">Background Color</label><div class="flex items-center gap-2"><div class="pickr-background"></div><button class="ml-2 px-3 py-2 rounded" onclick="pickrBackground.show()">Open</button></div></div></div>`;
+  }
+
+  app.innerHTML = `<div class="min-h-screen" style="background:${state.config.backgroundColor}"><div class="p-6" style="background:${state.config.primaryColor}"><button onclick="goHome()" class="text-white mb-2">← Back</button><h1 class="text-2xl font-bold text-white text-center">Admin Panel</h1></div><div class="p-6">${adminTabs}${content}</div></div>`;
+  setTimeout(()=>initPickrs(),120);
+}
+
+async function handleLogoUpload(e){ const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async ev => { state.config.logo = ev.target.result; if(firebaseInitialized){ try{ const ref = storage.ref('config/logo'); const blob = await (await fetch(state.config.logo)).blob(); await ref.put(blob); state.config.logoUrl = await ref.getDownloadURL(); } catch(e){ console.error('logo upload', e); } } saveState(); render(); }; reader.readAsDataURL(file); }
+
+loadState();
+</script>
+</body>
+</html>
+
+`
