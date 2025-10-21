@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonus Driving School</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // --- Firebase ---
+    const firebaseConfig = { /* your config */ };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // --- STATE ---
+    const state = {
+      page: 'admin',
+      selectedLicenseType: 'control',
+      isAdmin: true,
+      editingQuestion: null,
+      questions: {},
+    };
+
+    // --- LOAD & SAVE ---
+    async function loadState() {
+      try {
+        const saved = localStorage.getItem('drivingSchoolQuestions');
+        if (saved) state.questions = JSON.parse(saved);
+        const doc = await db.collection('data').doc('questions').get();
+        if (doc.exists) {
+          state.questions = doc.data();
+          localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+        } else {
+          state.questions = { ...generateDefaultQuestions(), control: defaultControlQuestions() };
+          await saveState();
+        }
+      } catch (e) { console.error('Error loading state', e); }
+      renderAdmin();
+    }
+
+    async function saveState() {
+      try {
+        localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+        await db.collection('data').doc('questions').set(state.questions);
+        console.log('Saved to Firebase');
+      } catch (e) { console.error('Save error', e); }
+    }
+
+    // --- DEFAULT QUESTIONS ---
+    function generateDefaultQuestions() { return { code1: [], code2: [], code3: [] }; }
+    function defaultControlQuestions() {
+      return [
+        { id: 9001, question: '[CONTROL] What is the speed limit in urban areas?', options: ['60 km/h','80 km/h','100 km/h','120 km/h'], correct: 0, image: null },
+        { id: 9002, question: '[CONTROL] What does a red traffic light mean?', options: ['Slow down','Stop','Proceed with caution','Yield'], correct: 1, image: null },
+      ];
+    }
+
+    // --- IMAGE UPLOAD ---
+    async function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        const base64 = ev.target.result;
+        state.editingQuestion.image = base64;
+        try {
+          const ref = storage.ref(`questions/${state.selectedLicenseType}/${state.editingQuestion.id}`);
+          const blob = await fetch(base64).then(r => r.blob());
+          await ref.put(blob);
+          const url = await ref.getDownloadURL();
+          state.editingQuestion.imageUrl = url;
+          console.log('Image uploaded');
+        } catch (err) {
+          console.error('Upload error', err);
+        }
+        renderAdmin();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // --- CRUD ---
+    function addQuestion() {
+      const newId = Date.now();
+      state.editingQuestion = { id: newId, question: '', options: ['', '', '', ''], correct: 0, image: null };
+      renderAdmin();
+    }
+
+    function saveQuestion() {
+      const arr = state.questions[state.selectedLicenseType];
+      const i = arr.findIndex(q => q.id === state.editingQuestion.id);
+      if (i >= 0) arr[i] = state.editingQuestion; else arr.push(state.editingQuestion);
+      state.editingQuestion = null;
+      saveState();
+      renderAdmin();
+    }
+
+    function deleteQuestion(id) {
+      if (confirm('Delete this question?')) {
+        state.questions[state.selectedLicenseType] = state.questions[state.selectedLicenseType].filter(q => q.id !== id);
+        saveState();
+        renderAdmin();
+      }
+    }
+
+    // --- RENDER ---
+    function renderAdmin() {
+      const app = document.getElementById('app');
+      const tabs = `
+        <div class='flex gap-2 mb-4'>
+          ${['code1','code2','code3','control'].map(t=>`<button onclick=\"state.selectedLicenseType='${t}';state.editingQuestion=null;renderAdmin()\" class='px-3 py-2 rounded ${state.selectedLicenseType===t?'bg-red-500 text-white':'bg-gray-200'}'>${t.toUpperCase()}</button>`).join('')}
+        </div>`;
+
+      if (state.editingQuestion) {
+        const q = state.editingQuestion;
+        app.innerHTML = `
+          <div class='p-6'>${tabs}
+            <div class='bg-white p-4 rounded shadow'>
+              <textarea id='qtext' class='w-full p-2 border mb-2' rows='3' placeholder='Question text'>${q.question}</textarea>
+              ${[0,1,2,3].map(i=>`<input type='text' class='w-full p-2 border mb-2' placeholder='Option ${i+1}' value='${q.options[i]}' onchange='state.editingQuestion.options[${i}]=this.value'>`).join('')}
+              <select class='w-full p-2 border mb-2' onchange='state.editingQuestion.correct=parseInt(this.value)'>
+                ${[0,1,2,3].map(i=>`<option value='${i}' ${q.correct===i?'selected':''}>Correct: Option ${i+1}</option>`).join('')}
+              </select>
+              <input type='file' accept='image/*' onchange='handleImageUpload(event)' class='w-full p-2 border mb-2'>
+              ${q.image?`<img src='${q.image}' class='max-w-xs mb-2 rounded'>`:''}
+              <div class='flex gap-2'>
+                <button onclick='state.editingQuestion.question=document.getElementById("qtext").value;saveQuestion()' class='bg-green-500 text-white px-4 py-2 rounded'>Save</button>
+                <button onclick='state.editingQuestion=null;renderAdmin()' class='bg-gray-400 text-white px-4 py-2 rounded'>Cancel</button>
+              </div>
+            </div>
+          </div>`;
+      } else {
+        const list = state.questions[state.selectedLicenseType].map(q => `
+          <div class='bg-white p-3 mb-2 rounded shadow flex justify-between items-center'>
+            <span>${q.question}</span>
+            <div>
+              <button onclick=\"state.editingQuestion=state.questions['${state.selectedLicenseType}'].find(x=>x.id===${q.id});renderAdmin()\" class='text-blue-500 mr-2'>✏️</button>
+              <button onclick='deleteQuestion(${q.id})' class='text-red-500'>🗑️</button>
+            </div>
+          </div>`).join('');
+        app.innerHTML = `<div class='p-6'>${tabs}<button onclick='addQuestion()' class='bg-red-500 text-white px-4 py-2 rounded mb-4'>+ Add Question</button>${list}</div>`;
+      }
+    }
+
+    loadState();
+  </script>
+</body>
+</html>
