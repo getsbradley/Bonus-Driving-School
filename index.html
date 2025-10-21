@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#EF4444">
+  <title>Bonus Driving School — Enhanced</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+  <!-- Pickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
+  <style>
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .blur-bg { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .login-fade { animation: fadeIn 360ms ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .animate-shake { animation: shake 0.5s linear; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .loading { opacity: 0.7; pointer-events: none; }
+    .question-item { transition: all 0.2s ease; }
+    .question-item:hover { transform: translateY(-2px); }
+    .category-badge { 
+      display: inline-block; 
+      padding: 2px 8px; 
+      border-radius: 12px; 
+      font-size: 0.75rem; 
+      font-weight: 600; 
+      margin-left: 8px;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    /* Drag & Drop Styles */
+    .editor-container {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .editor-preview {
+      flex: 1;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 2rem;
+      background: white;
+      min-height: 400px;
+      position: relative;
+    }
+    .editor-controls {
+      width: 300px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    .drop-zone {
+      position: absolute;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      background: rgba(243, 244, 246, 0.8);
+      transition: all 0.3s ease;
+    }
+    .drop-zone.active {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+    }
+    .drop-zone.top {
+      top: 1rem;
+      left: 1rem;
+      right: 1rem;
+      height: 150px;
+    }
+    .drop-zone.left {
+      top: 1rem;
+      left: 1rem;
+      bottom: 1rem;
+      width: 200px;
+    }
+    .drop-zone.right {
+      top: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+      width: 200px;
+    }
+    .drop-zone-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #6b7280;
+      font-weight: 500;
+      pointer-events: none;
+    }
+    .draggable-image {
+      position: absolute;
+      cursor: move;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .draggable-image:hover {
+      border-color: #3b82f6;
+    }
+    .draggable-image.dragging {
+      opacity: 0.8;
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .resize-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #3b82f6;
+      border: 2px solid white;
+      border-radius: 50%;
+      bottom: -6px;
+      right: -6px;
+      cursor: nwse-resize;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .draggable-image:hover .resize-handle {
+      opacity: 1;
+    }
+    .control-group {
+      margin-bottom: 1.5rem;
+    }
+    .control-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+    }
+    .size-slider {
+      width: 100%;
+    }
+    .size-value {
+      text-align: center;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-top: 0.5rem;
+    }
+    .test-question-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .test-question-image.top { margin: 0 auto 1rem auto; }
+    .test-question-image.left { float: left; margin: 0 1rem 1rem 0; max-width: 40%; }
+    .test-question-image.right { float: right; margin: 0 0 1rem 1rem; max-width: 40%; }
+    
+    /* Preview Modal Styles */
+    .preview-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 2rem;
+    }
+    .preview-content {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .preview-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.25rem;
+    }
+    .preview-close:hover {
+      background: #dc2626;
+    }
+    .preview-question {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #1f2937;
+    }
+    .preview-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .preview-option {
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .preview-option:hover {
+      border-color: #3b82f6;
+      background: #f8fafc;
+    }
+    .preview-option.correct {
+      border-color: #10b981;
+      background: #ecfdf5;
+    }
+    .preview-option.selected {
+      border-color: #3b82f6;
+      background: #dbeafe;
+    }
+    .option-label {
+      font-weight: 600;
+      margin-right: 0.5rem;
+      color: #374151;
+    }
+    @media (max-width: 768px) {
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+      .editor-container {
+        flex-direction: column;
+      }
+      .editor-controls {
+        width: 100%;
+      }
+      .test-question-image.left,
+      .test-question-image.right {
+        float: none;
+        margin: 0 auto 1rem auto;
+        max-width: 100%;
+      }
+      .preview-modal {
+        padding: 1rem;
+      }
+      .preview-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="syncStatus" class="fixed right-5 bottom-5 px-3 py-2 rounded text-white" style="background:#10B981; display: none;">✓ Synced</div>
+  <div id="loadingIndicator" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50" style="display: none;">
+    <div class="text-center">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2" style="border-color: #EF4444;"></div>
+      <p class="mt-2">Loading...</p>
+    </div>
+  </div>
+
+<script>
+// --- Firebase config ---
+const firebaseConfig = {
+  apiKey: "AIzaSyD4En5Xe4HKjUd0LYrsmHHeV2ZjFyjxnBU",
+  authDomain: "bonus-driving-school-aabd2.firebaseapp.com",
+  projectId: "bonus-driving-school-aabd2",
+  storageBucket: "bonus-driving-school-aabd2.firebasestorage.app",
+  messagingSenderId: "72558421307",
+  appId: "1:72558421307:web:e9d3450e78e8d4e13d431e",
+  measurementId: "G-WT9KQ340DG"
+};
+
+// --- Application State and Initialization ---
+let db = null, storage = null, firebaseInitialized = false;
+let firebaseListeners = [];
+let pickrInitialized = false;
+
+// Drag & Drop State
+let dragState = {
+  isDragging: false,
+  isResizing: false,
+  dragElement: null,
+  startX: 0,
+  startY: 0,
+  startWidth: 0,
+  startHeight: 0,
+  startLeft: 0,
+  startTop: 0
+};
+
+// Preview State
+let previewState = {
+  isOpen: false,
+  currentQuestion: null,
+  selectedAnswer: null
+};
+
+// Initialize Firebase
+function initializeFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+    storage = firebase.storage();
+    firebaseInitialized = true;
+  } catch (e) { 
+    console.error('Firebase initialization failed:', e);
+    firebaseInitialized = false;
+  }
+}
+
+initializeFirebase();
+
+// --- Performance Optimized Utilities ---
+function showLoading(show) {
+  const el = document.getElementById('loadingIndicator');
+  if (el) el.style.display = show ? 'flex' : 'none';
+}
+
+function updateSyncStatus(type, msg = '') {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  
+  el.style.display = 'inline-block';
+  switch(type) {
+    case 'syncing':
+      el.style.background = '#3B82F6';
+      el.textContent = '🔄 Syncing...';
+      break;
+    case 'synced':
+      el.style.background = '#10B981';
+      el.textContent = '✓ Synced';
+      setTimeout(() => { el.style.display = 'none'; }, 2000);
+      break;
+    case 'offline':
+      el.style.background = '#6B7280';
+      el.textContent = msg || '📴 Offline';
+      break;
+    default:
+      el.style.background = '#EF4444';
+      el.textContent = msg || '⚠ Error';
+  }
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function validateIdNumber(id) {
+  return id && id.trim().length >= 5;
+}
+
+function validateQuestion(question) {
+  return question.question && question.question.trim() && 
+         question.options && question.options.length === 4 &&
+         question.options.every(opt => opt && opt.trim()) &&
+         question.correct >= 0 && question.correct <= 3;
+}
+
+// --- Enhanced State Management ---
+const state = {
+  page: 'home',
+  selectedLicense: null,
+  idNumber: '',
+  currentTest: [],
+  currentQuestion: 0,
+  answers: [],
+  testResults: null,
+  isAdmin: false,
+  adminPage: 'questions',
+  editingQuestion: null,
+  selectedQuestionType: 'rules',
+  selectedLicenseType: 'code1',
+  config: { 
+    appName: 'Bonus Driving School', 
+    logo: null, 
+    primaryColor: '#EF4444', 
+    secondaryColor: '#000000', 
+    backgroundColor: '#FFFFFF' 
+  },
+  questions: {
+    rules: [],
+    signs: [],
+    controls_code1: [],
+    controls_code2: [],
+    controls_code3: []
+  },
+  testHistory: {},
+  isLoading: false
+};
+
+// Generate sample questions for each category
+function generateSampleQuestions() {
+  return {
+    rules: Array.from({length: 5}, (_, i) => ({
+      id: `rules_${i + 1}`,
+      question: `Rules Question ${i + 1}: What is the correct procedure when...?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct: Math.floor(Math.random() * 4),
+      image: null,
+      imageSize: 100,
+      imagePosition: 'top',
+      imageX: 50,
+      imageY: 50,
+      category: 'rules'
+    })),
+    signs: Array.from({length: 5}, (_, i) => ({
+      id: `signs_${i + 1}`,
+      question: `Signs Question ${i + 1}: What does this sign mean?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct: Math.floor(Math.random() * 4),
+      image: null,
+      imageSize: 100,
+      imagePosition: 'top',
+      imageX: 50,
+      imageY: 50,
+      category: 'signs'
+    })),
+    controls_code1: Array.from({length: 5}, (_, i) => ({
+      id: `controls_code1_${i + 1}`,
+      question: `Code 1 Control Question ${i + 1}: Special rule for Code 1...?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct: Math.floor(Math.random() * 4),
+      image: null,
+      imageSize: 100,
+      imagePosition: 'top',
+      imageX: 50,
+      imageY: 50,
+      category: 'controls',
+      licenseType: 'code1'
+    })),
+    controls_code2: Array.from({length: 5}, (_, i) => ({
+      id: `controls_code2_${i + 1}`,
+      question: `Code 2 Control Question ${i + 1}: Special rule for Code 2...?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct: Math.floor(Math.random() * 4),
+      image: null,
+      imageSize: 100,
+      imagePosition: 'top',
+      imageX: 50,
+      imageY: 50,
+      category: 'controls',
+      licenseType: 'code2'
+    })),
+    controls_code3: Array.from({length: 5}, (_, i) => ({
+      id: `controls_code3_${i + 1}`,
+      question: `Code 3 Control Question ${i + 1}: Special rule for Code 3...?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct: Math.floor(Math.random() * 4),
+      image: null,
+      imageSize: 100,
+      imagePosition: 'top',
+      imageX: 50,
+      imageY: 50,
+      category: 'controls',
+      licenseType: 'code3'
+    }))
+  };
+}
+
+// Optimized loadState
+async function loadState() {
+  try {
+    showLoading(true);
+    
+    // Load from localStorage first
+    const saved = localStorage.getItem('drivingSchoolQuestions');
+    if (saved) {
+      try {
+        state.questions = JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing saved questions:', e);
+        state.questions = generateSampleQuestions();
+      }
+    }
+    
+    const cfgSaved = localStorage.getItem('drivingSchoolConfig');
+    if (cfgSaved) {
+      try {
+        state.config = JSON.parse(cfgSaved);
+      } catch (e) {
+        console.error('Error parsing saved config:', e);
+      }
+    }
+    
+    const historySaved = localStorage.getItem('drivingSchoolHistory');
+    if (historySaved) {
+      try {
+        state.testHistory = JSON.parse(historySaved);
+      } catch (e) {
+        console.error('Error parsing saved history:', e);
+      }
+    }
+    
+    // Set defaults if none exist
+    if (!state.questions.rules || state.questions.rules.length === 0) {
+      state.questions = generateSampleQuestions();
+    }
+    
+    // Firebase sync - non-blocking
+    if (firebaseInitialized) {
+      updateSyncStatus('syncing');
+      setTimeout(() => syncWithFirebase(), 100);
+    } else {
+      updateSyncStatus('offline', '📴 Offline');
+    }
+  } catch (e) {
+    console.error('Load state failed:', e);
+    updateSyncStatus('error', 'Load failed');
+    if (!state.questions.rules || state.questions.rules.length === 0) {
+      state.questions = generateSampleQuestions();
+    }
+  } finally {
+    showLoading(false);
+    render();
+  }
+}
+
+// Non-blocking Firebase sync
+async function syncWithFirebase() {
+  if (!firebaseInitialized) return;
+  
+  try {
+    // Load questions
+    const qDoc = await db.collection('data').doc('questions').get();
+    if (qDoc.exists) {
+      const firebaseQuestions = qDoc.data();
+      // Merge with existing questions, preserve any local changes
+      for (const key in firebaseQuestions) {
+        if (state.questions[key]) {
+          state.questions[key] = firebaseQuestions[key];
+        }
+      }
+      localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+    } else {
+      // Save default questions to Firebase if none exist
+      await db.collection('data').doc('questions').set(state.questions);
+    }
+    
+    // Load config
+    const cfgDoc = await db.collection('config').doc('appConfig').get();
+    if (cfgDoc.exists) {
+      state.config = { ...state.config, ...cfgDoc.data() };
+      localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config));
+    } else {
+      await db.collection('config').doc('appConfig').set(state.config);
+    }
+    
+    updateSyncStatus('synced');
+    setupFirebaseListeners();
+  } catch (firebaseError) {
+    console.error('Firebase sync failed:', firebaseError);
+    updateSyncStatus('offline', 'Sync failed');
+  }
+}
+
+// Optimized Firebase listeners
+function setupFirebaseListeners() {
+  if (!firebaseInitialized || state.page !== 'admin') return;
+  
+  firebaseListeners.forEach(unsubscribe => unsubscribe());
+  firebaseListeners = [];
+  
+  const questionsListener = db.collection('data').doc('questions')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const firebaseQuestions = doc.data();
+        for (const key in firebaseQuestions) {
+          if (state.questions[key]) {
+            state.questions[key] = firebaseQuestions[key];
+          }
+        }
+        localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+        if (state.page === 'admin' && state.adminPage === 'questions') {
+          renderAdminContent();
+        }
+      }
+    });
+  
+  const configListener = db.collection('config').doc('appConfig')
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        state.config = { ...state.config, ...doc.data() };
+        localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config));
+        if (state.page === 'admin' && state.adminPage === 'settings') {
+          renderAdminContent();
+        }
+      }
+    });
+  
+  firebaseListeners.push(questionsListener, configListener);
+}
+
+// Debounced saveState
+let saveStateTimeout = null;
+function saveState() {
+  if (saveStateTimeout) {
+    clearTimeout(saveStateTimeout);
+  }
+  
+  localStorage.setItem('drivingSchoolQuestions', JSON.stringify(state.questions));
+  localStorage.setItem('drivingSchoolConfig', JSON.stringify(state.config));
+  localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+  
+  saveStateTimeout = setTimeout(async () => {
+    if (firebaseInitialized) {
+      updateSyncStatus('syncing');
+      try {
+        await db.collection('data').doc('questions').set(state.questions);
+        await db.collection('config').doc('appConfig').set(state.config);
+        updateSyncStatus('synced');
+      } catch (e) {
+        console.error('Firebase save failed:', e);
+        updateSyncStatus('error', 'Save failed');
+      }
+    }
+  }, 1000);
+}
+
+// Image upload
+async function uploadImageBase64(category, questionId, base64) {
+  if (!firebaseInitialized) return null;
+  try {
+    const ref = storage.ref(`questions/${category}/${questionId}`);
+    const blob = await (await fetch(base64)).blob();
+    await ref.put(blob);
+    return await ref.getDownloadURL();
+  } catch (e) {
+    console.error('Image upload failed:', e);
+    return null;
+  }
+}
+
+// --- Enhanced Test Generation ---
+function generateTest(licenseType) {
+  // Get questions based on license type
+  const rulesQuestions = shuffleArray([...state.questions.rules]).slice(0, 32);
+  const signsQuestions = shuffleArray([...state.questions.signs]).slice(0, 32);
+  
+  // Mix rules and signs questions together
+  const mixedQuestions = shuffleArray([...rulesQuestions, ...signsQuestions]);
+  
+  // Get control questions based on license type
+  let controlQuestions = [];
+  let controlCount = 8; // Default for code2 and code3
+  
+  switch(licenseType) {
+    case 'code1':
+      controlQuestions = shuffleArray([...state.questions.controls_code1]).slice(0, 10);
+      controlCount = 10;
+      break;
+    case 'code2':
+      controlQuestions = shuffleArray([...state.questions.controls_code2]).slice(0, 8);
+      break;
+    case 'code3':
+      controlQuestions = shuffleArray([...state.questions.controls_code3]).slice(0, 8);
+      break;
+  }
+  
+  // Combine mixed questions with control questions
+  const fullTest = [...mixedQuestions, ...controlQuestions];
+  
+  // Add metadata to each question for tracking
+  return fullTest.map((q, index) => ({
+    ...q,
+    questionNumber: index + 1,
+    isControl: index >= 64, // Controls start after 64 mixed questions
+    category: q.category || (index < 32 ? 'rules' : 'signs') // Approximate category for mixed questions
+  }));
+}
+
+// --- Preview Functions ---
+function previewQuestion(questionId) {
+  const category = state.selectedQuestionType;
+  const question = state.questions[category].find(q => q.id == questionId);
+  
+  if (question) {
+    previewState.isOpen = true;
+    previewState.currentQuestion = question;
+    previewState.selectedAnswer = null;
+    render();
+  }
+}
+
+function closePreview() {
+  previewState.isOpen = false;
+  previewState.currentQuestion = null;
+  previewState.selectedAnswer = null;
+  render();
+}
+
+function selectPreviewAnswer(index) {
+  previewState.selectedAnswer = index;
+  render();
+}
+
+function renderPreviewModal() {
+  if (!previewState.isOpen || !previewState.currentQuestion) return '';
+  
+  const q = previewState.currentQuestion;
+  const isCorrectSelected = previewState.selectedAnswer === q.correct;
+  
+  return `
+    <div class="preview-modal">
+      <div class="preview-content">
+        <button class="preview-close" onclick="closePreview()">×</button>
+        <h2 class="text-xl font-bold mb-4" style="color:${state.config.secondaryColor}">Question Preview</h2>
+        
+        ${q.image ? `
+          <div class="${q.imagePosition === 'top' ? 'text-center' : ''} mb-4">
+            <img src="${q.image}" 
+                 class="test-question-image ${q.imagePosition}" 
+                 style="max-width: ${Math.min(400, q.imageSize)}px;"
+                 alt="Question image">
+          </div>
+        ` : ''}
+        
+        <div class="preview-question">${q.question}</div>
+        
+        <div class="preview-options">
+          ${q.options.map((option, index) => {
+            let optionClass = 'preview-option';
+            if (previewState.selectedAnswer === index) {
+              optionClass += ' selected';
+            }
+            if (previewState.selectedAnswer !== null && index === q.correct) {
+              optionClass += ' correct';
+            }
+            
+            return `
+              <div class="${optionClass}" onclick="selectPreviewAnswer(${index})">
+                <span class="option-label">${String.fromCharCode(65 + index)}.</span>
+                ${option}
+                ${previewState.selectedAnswer !== null && index === q.correct ? ' ✅' : ''}
+                ${previewState.selectedAnswer === index && index !== q.correct ? ' ❌' : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+        
+        ${previewState.selectedAnswer !== null ? `
+          <div class="mt-4 p-3 rounded ${
+            isCorrectSelected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }">
+            <strong>${isCorrectSelected ? 'Correct! 🎉' : 'Incorrect!'}</strong>
+            ${!isCorrectSelected ? ` The correct answer is ${String.fromCharCode(65 + q.correct)}. ${q.options[q.correct]}` : ''}
+          </div>
+        ` : `
+          <div class="mt-4 text-sm text-gray-600">
+            Click on an option to see if it's correct
+          </div>
+        `}
+        
+        <div class="mt-6 pt-4 border-t border-gray-200">
+          <div class="text-sm text-gray-600">
+            <strong>Question Details:</strong><br>
+            • Category: ${q.category}<br>
+            • Correct Answer: ${String.fromCharCode(65 + q.correct)}<br>
+            ${q.image ? `• Image Position: ${q.imagePosition}<br>` : ''}
+            ${q.image ? `• Image Size: ${q.imageSize}px<br>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// --- Navigation and Test Flow ---
+function goHome() { 
+  if (state.page === 'admin') {
+    firebaseListeners.forEach(unsubscribe => unsubscribe());
+    firebaseListeners = [];
+  }
+  
+  state.page = 'home'; 
+  state.selectedLicense = null; 
+  state.idNumber = ''; 
+  state.testResults = null; 
+  state.isAdmin = false; 
+  state.editingQuestion = null;
+  render(); 
+}
+
+function selectLicense(license) { 
+  state.selectedLicense = license; 
+  state.page = 'id-input'; 
+  render(); 
+}
+
+function startTest() {
+  if (!validateIdNumber(state.idNumber)) {
+    alert('Please enter a valid ID number (at least 5 characters)');
+    return;
+  }
+  
+  state.currentTest = generateTest(state.selectedLicense);
+  state.answers = new Array(state.currentTest.length).fill(null);
+  state.currentQuestion = 0;
+  state.page = 'test';
+  render();
+}
+
+function submitAnswer(idx) {
+  state.answers[state.currentQuestion] = idx;
+  if (state.currentQuestion < state.currentTest.length - 1) {
+    state.currentQuestion++;
+    render();
+  } else {
+    finishTest();
+  }
+}
+
+function finishTest() {
+  const results = state.currentTest.map((q, i) => ({
+    question: q.question,
+    userAnswer: state.answers[i],
+    correctAnswer: q.correct,
+    isCorrect: state.answers[i] === q.correct,
+    options: q.options,
+    image: q.image,
+    imageSize: q.imageSize,
+    imagePosition: q.imagePosition,
+    category: q.category,
+    isControl: q.isControl,
+    questionNumber: q.questionNumber
+  }));
+  
+  const score = results.filter(r => r.isCorrect).length;
+  const percentage = ((score / results.length) * 100).toFixed(1);
+  
+  // Calculate category scores
+  const rulesScore = results.filter(r => r.category === 'rules' && r.isCorrect).length;
+  const signsScore = results.filter(r => r.category === 'signs' && r.isCorrect).length;
+  const controlsScore = results.filter(r => r.isControl && r.isCorrect).length;
+  
+  const rulesTotal = results.filter(r => r.category === 'rules').length;
+  const signsTotal = results.filter(r => r.category === 'signs').length;
+  const controlsTotal = results.filter(r => r.isControl).length;
+  
+  const record = {
+    date: new Date().toISOString(),
+    licenseType: state.selectedLicense,
+    score,
+    total: results.length,
+    percentage,
+    results,
+    categoryScores: {
+      rules: { score: rulesScore, total: rulesTotal },
+      signs: { score: signsScore, total: signsTotal },
+      controls: { score: controlsScore, total: controlsTotal }
+    }
+  };
+  
+  if (!state.testHistory[state.idNumber]) {
+    state.testHistory[state.idNumber] = [];
+  }
+  state.testHistory[state.idNumber].push(record);
+  
+  localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+  if (firebaseInitialized) {
+    saveTestHistory(state.idNumber, record);
+  }
+  
+  state.testResults = record;
+  state.page = 'results';
+  render();
+}
+
+async function saveTestHistory(idNumber, testRecord) {
+  if (!firebaseInitialized) return;
+  try {
+    await db.collection('testHistory').doc(idNumber).set({
+      tests: state.testHistory[idNumber],
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.error('Test history save failed:', e);
+  }
+}
+
+// --- Admin Functions ---
+function showAdminLogin() {
+  state.page = 'admin-login';
+  render();
+}
+
+function tryAdminLogin(pw) {
+  if (pw === 'admin123') {
+    state.isAdmin = true;
+    state.page = 'admin';
+    render();
+  } else {
+    const el = document.getElementById('adminCard');
+    if (el) {
+      el.classList.add('animate-shake');
+      setTimeout(() => el.classList.remove('animate-shake'), 600);
+    }
+    alert('Incorrect password');
+  }
+}
+
+// CRUD for questions
+function addQuestion() {
+  const newId = Date.now();
+  state.editingQuestion = {
+    id: newId,
+    question: '',
+    options: ['', '', '', ''],
+    correct: 0,
+    image: null,
+    imageSize: 100,
+    imagePosition: 'top',
+    imageX: 50,
+    imageY: 50,
+    imageUrl: null,
+    category: state.selectedQuestionType.includes('controls') ? 'controls' : state.selectedQuestionType,
+    licenseType: state.selectedQuestionType.includes('controls') ? state.selectedQuestionType.split('_')[1] : null
+  };
+  renderAdminContent();
+}
+
+function saveQuestion() {
+  if (!state.editingQuestion || !validateQuestion(state.editingQuestion)) {
+    alert('Please fill in all question fields and ensure all options are complete');
+    return;
+  }
+  
+  const q = state.editingQuestion;
+  const category = state.selectedQuestionType;
+  
+  if (!state.questions[category]) {
+    state.questions[category] = [];
+  }
+  
+  const arr = state.questions[category];
+  const idx = arr.findIndex(x => x.id === q.id);
+  
+  if (idx >= 0) {
+    arr[idx] = q;
+  } else {
+    arr.push(q);
+  }
+  
+  state.editingQuestion = null;
+  saveState();
+  renderAdminContent();
+}
+
+// Enhanced image handling with drag & drop
+async function handleImageForEditing(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Image too large (max 5MB)');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    if (!state.editingQuestion) return;
+    
+    state.editingQuestion.image = ev.target.result;
+    
+    if (firebaseInitialized) {
+      const url = await uploadImageBase64(
+        state.selectedQuestionType,
+        state.editingQuestion.id,
+        state.editingQuestion.image
+      );
+      if (url) {
+        state.editingQuestion.imageUrl = url;
+      }
+    }
+    
+    renderAdminContent();
+    // Initialize drag & drop after image is loaded
+    setTimeout(initializeDragAndDrop, 100);
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateImageSize(value) {
+  if (state.editingQuestion) {
+    state.editingQuestion.imageSize = parseInt(value);
+    renderAdminContent();
+    setTimeout(initializeDragAndDrop, 100);
+  }
+}
+
+function removeImage() {
+  if (state.editingQuestion) {
+    state.editingQuestion.image = null;
+    state.editingQuestion.imageSize = 100;
+    state.editingQuestion.imagePosition = 'top';
+    state.editingQuestion.imageX = 50;
+    state.editingQuestion.imageY = 50;
+    renderAdminContent();
+  }
+}
+
+function deleteQuestion(id) {
+  if (confirm('Are you sure you want to delete this question?')) {
+    const category = state.selectedQuestionType;
+    if (state.questions[category]) {
+      state.questions[category] = state.questions[category]
+        .filter(q => q.id !== id);
+      saveState();
+      renderAdminContent();
+    }
+  }
+}
+
+// FIXED: Edit question function
+function editQuestion(questionId) {
+  const category = state.selectedQuestionType;
+  const question = state.questions[category].find(q => q.id == questionId);
+  
+  if (question) {
+    state.editingQuestion = JSON.parse(JSON.stringify(question));
+    renderAdminContent();
+    // Initialize drag & drop after editing starts
+    setTimeout(initializeDragAndDrop, 100);
+  } else {
+    console.error('Question not found:', questionId);
+  }
+}
+
+// --- Drag & Drop Functions ---
+function initializeDragAndDrop() {
+  const imageElement = document.getElementById('draggableImage');
+  const resizeHandle = document.getElementById('resizeHandle');
+  const dropZones = document.querySelectorAll('.drop-zone');
+  
+  if (!imageElement) return;
+  
+  // Mouse event handlers for dragging
+  imageElement.addEventListener('mousedown', startDrag);
+  if (resizeHandle) {
+    resizeHandle.addEventListener('mousedown', startResize);
+  }
+  
+  // Touch event handlers for mobile
+  imageElement.addEventListener('touchstart', startDrag);
+  if (resizeHandle) {
+    resizeHandle.addEventListener('touchstart', startResize);
+  }
+  
+  // Add drop zone highlighting
+  dropZones.forEach(zone => {
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zone.classList.add('active');
+    });
+    
+    zone.addEventListener('dragleave', () => {
+      zone.classList.remove('active');
+    });
+    
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('active');
+      handleDrop(zone);
+    });
+  });
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  const isTouch = e.type === 'touchstart';
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+  
+  dragState.isDragging = true;
+  dragState.dragElement = e.target;
+  dragState.startX = clientX;
+  dragState.startY = clientY;
+  dragState.startLeft = parseInt(dragState.dragElement.style.left) || 0;
+  dragState.startTop = parseInt(dragState.dragElement.style.top) || 0;
+  
+  dragState.dragElement.classList.add('dragging');
+  
+  document.addEventListener('mousemove', doDrag);
+  document.addEventListener('touchmove', doDrag);
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchend', stopDrag);
+}
+
+function doDrag(e) {
+  if (!dragState.isDragging && !dragState.isResizing) return;
+  
+  const isTouch = e.type === 'touchmove';
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+  
+  const deltaX = clientX - dragState.startX;
+  const deltaY = clientY - dragState.startY;
+  
+  if (dragState.isDragging) {
+    // Dragging the image
+    const newLeft = Math.max(0, Math.min(100, dragState.startLeft + (deltaX / 3)));
+    const newTop = Math.max(0, Math.min(100, dragState.startTop + (deltaY / 3)));
+    
+    dragState.dragElement.style.left = newLeft + '%';
+    dragState.dragElement.style.top = newTop + '%';
+    
+    // Update state
+    if (state.editingQuestion) {
+      state.editingQuestion.imageX = newLeft;
+      state.editingQuestion.imageY = newTop;
+    }
+  } else if (dragState.isResizing) {
+    // Resizing the image
+    const scale = 1 + (deltaX / 200);
+    const newSize = Math.max(50, Math.min(300, dragState.startWidth * scale));
+    
+    dragState.dragElement.style.width = newSize + 'px';
+    
+    // Update state
+    if (state.editingQuestion) {
+      state.editingQuestion.imageSize = newSize;
+      updateSizeDisplay();
+    }
+  }
+}
+
+function stopDrag() {
+  dragState.isDragging = false;
+  dragState.isResizing = false;
+  
+  if (dragState.dragElement) {
+    dragState.dragElement.classList.remove('dragging');
+  }
+  
+  document.removeEventListener('mousemove', doDrag);
+  document.removeEventListener('touchmove', doDrag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('touchend', stopDrag);
+}
+
+function startResize(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const isTouch = e.type === 'touchstart';
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+  
+  dragState.isResizing = true;
+  dragState.dragElement = e.target.parentElement;
+  dragState.startX = clientX;
+  dragState.startWidth = parseInt(dragState.dragElement.style.width) || 200;
+  
+  document.addEventListener('mousemove', doDrag);
+  document.addEventListener('touchmove', doDrag);
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchend', stopDrag);
+}
+
+function handleDrop(zone) {
+  if (!state.editingQuestion) return;
+  
+  const position = zone.classList[1]; // 'top', 'left', or 'right'
+  state.editingQuestion.imagePosition = position;
+  
+  // Reset position for top placement
+  if (position === 'top') {
+    state.editingQuestion.imageX = 50;
+    state.editingQuestion.imageY = 50;
+  }
+  
+  renderAdminContent();
+  setTimeout(initializeDragAndDrop, 100);
+}
+
+function updateSizeDisplay() {
+  const sizeValue = document.getElementById('sizeValue');
+  if (sizeValue && state.editingQuestion) {
+    sizeValue.textContent = Math.round(state.editingQuestion.imageSize) + 'px';
+  }
+}
+
+// --- Optimized Color Pickers ---
+let pickrPrimary, pickrSecondary, pickrBackground;
+
+function initPickrs() {
+  if (pickrInitialized) return;
+  pickrInitialized = true;
+  
+  const PickrClass = window.Pickr;
+  if (!PickrClass) {
+    console.error('Pickr not loaded');
+    return;
+  }
+  
+  try {
+    pickrPrimary = PickrClass.create({
+      el: '.pickr-primary',
+      theme: 'classic',
+      default: state.config.primaryColor,
+      components: {
+        preview: true,
+        opacity: false,
+        hue: true,
+        interaction: { hex: true, rgba: false, input: true, save: true }
+      }
+    });
+    
+    pickrSecondary = PickrClass.create({
+      el: '.pickr-secondary',
+      theme: 'classic',
+      default: state.config.secondaryColor,
+      components: {
+        preview: true,
+        opacity: false,
+        hue: true,
+        interaction: { hex: true, input: true, save: true }
+      }
+    });
+    
+    pickrBackground = PickrClass.create({
+      el: '.pickr-background',
+      theme: 'classic',
+      default: state.config.backgroundColor,
+      components: {
+        preview: true,
+        opacity: false,
+        hue: true,
+        interaction: { hex: true, input: true, save: true }
+      }
+    });
+    
+    pickrPrimary.on('save', (color) => {
+      state.config.primaryColor = color.toHEXA().toString();
+      pickrPrimary.hide();
+      saveState();
+    });
+    
+    pickrSecondary.on('save', (color) => {
+      state.config.secondaryColor = color.toHEXA().toString();
+      pickrSecondary.hide();
+      saveState();
+    });
+    
+    pickrBackground.on('save', (color) => {
+      state.config.backgroundColor = color.toHEXA().toString();
+      pickrBackground.hide();
+      saveState();
+    });
+  } catch (e) {
+    console.error('Pickr initialization failed:', e);
+  }
+}
+
+// --- Enhanced Render Functions ---
+function render() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  
+  document.body.style.background = state.config.backgroundColor || '#fff';
+  
+  // If preview modal is open, render it
+  if (previewState.isOpen) {
+    app.innerHTML = renderPreviewModal();
+    return;
+  }
+  
+  switch (state.page) {
+    case 'home':
+      renderHome(app);
+      break;
+    case 'id-input':
+      renderIdInput(app);
+      break;
+    case 'test':
+      renderTest(app);
+      break;
+    case 'results':
+      renderResults(app);
+      break;
+    case 'admin-login':
+      renderAdminLogin(app);
+      break;
+    case 'admin':
+      if (state.isAdmin) {
+        renderAdmin(app);
+      } else {
+        goHome();
+      }
+      break;
+    default:
+      app.innerHTML = '<div class="p-6">Page not found</div>';
+  }
+}
+
+function renderAdminContent() {
+  if (state.page !== 'admin' || !state.isAdmin) return;
+  
+  const contentArea = document.getElementById('adminContent');
+  if (!contentArea) return;
+  
+  let content = '';
+  switch (state.adminPage) {
+    case 'questions':
+      content = renderAdminQuestions();
+      break;
+    case 'statistics':
+      content = renderAdminStatistics();
+      break;
+    case 'settings':
+      content = renderAdminSettings();
+      break;
+  }
+  
+  contentArea.innerHTML = content;
+  
+  if (state.adminPage === 'settings' && !pickrInitialized) {
+    setTimeout(() => initPickrs(), 100);
+  }
+}
+
+function renderHome(app) {
+  app.innerHTML = `
+    <div class="min-h-screen flex flex-col" style="background:${state.config.backgroundColor}">
+      <div class="p-6" style="background:${state.config.primaryColor}">
+        <h1 class="text-3xl font-bold text-white text-center">${state.config.appName}</h1>
+        ${state.config.logo ? `<img src="${state.config.logo}" class="mx-auto mt-4 h-20 object-contain">` : ''}
+      </div>
+      <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+        <h2 class="text-2xl font-bold" style="color:${state.config.secondaryColor}">Choose Your License Type</h2>
+        <div class="w-full max-w-md space-y-3">
+          <button onclick="selectLicense('code1')" class="w-full p-4 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">
+            📋 Code 1 License Test<br>
+            <small class="text-sm font-normal">74 Questions (64 Mixed + 10 Controls)</small>
+          </button>
+          <button onclick="selectLicense('code2')" class="w-full p-4 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">
+            📋 Code 2 License Test<br>
+            <small class="text-sm font-normal">72 Questions (64 Mixed + 8 Controls)</small>
+          </button>
+          <button onclick="selectLicense('code3')" class="w-full p-4 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">
+            📋 Code 3 License Test<br>
+            <small class="text-sm font-normal">72 Questions (64 Mixed + 8 Controls)</small>
+          </button>
+          <button onclick="showAdminLogin()" class="mt-4 p-3 rounded text-white transition hover:opacity-90" style="background:${state.config.secondaryColor}">⚙️ Admin Access</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderIdInput(app) {
+  app.innerHTML = `
+    <div class="min-h-screen">
+      <div class="p-6" style="background:${state.config.primaryColor}">
+        <button onclick="goHome()" class="text-white flex items-center">
+          <span class="mr-2">←</span> Back
+        </button>
+      </div>
+      <div class="flex items-center justify-center p-6">
+        <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-8 border-2" style="border-color:${state.config.primaryColor}">
+          <h2 class="text-2xl font-bold mb-6" style="color:${state.config.secondaryColor}">Enter Your ID Number</h2>
+          <input id="idInput" type="text" value="${state.idNumber}" placeholder="Enter at least 5 characters" class="w-full p-4 border-2 rounded mb-4" style="border-color:${state.config.primaryColor}" oninput="state.idNumber=this.value">
+          <button onclick="startTest()" class="w-full p-4 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">Start ${state.selectedLicense.toUpperCase()} Test</button>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(() => {
+    const el = document.getElementById('idInput');
+    if (el) el.focus();
+  }, 50);
+}
+
+function renderTest(app) {
+  if (!state.currentTest.length || state.currentQuestion >= state.currentTest.length) {
+    goHome();
+    return;
+  }
+  
+  const q = state.currentTest[state.currentQuestion];
+  const progress = ((state.currentQuestion + 1) / state.currentTest.length) * 100;
+  const isControlQuestion = q.isControl;
+  
+  // Calculate image size based on stored percentage
+  const imageSize = q.imageSize || 100;
+  const maxWidth = Math.min(800, (imageSize / 100) * 800); // Max 800px container
+  
+  app.innerHTML = `
+    <div class="min-h-screen">
+      <div class="p-6" style="background:${state.config.primaryColor}">
+        <h1 class="text-xl font-bold text-white text-center">${state.config.appName}</h1>
+        <div class="text-white text-center mt-2">
+          Question ${state.currentQuestion + 1} of ${state.currentTest.length}
+          ${isControlQuestion ? '<span class="category-badge bg-yellow-500 text-black">CONTROL</span>' : ''}
+        </div>
+        <div class="w-full bg-white rounded-full h-2 mt-2">
+          <div class="h-2 rounded-full transition-all duration-300" style="background:${state.config.secondaryColor}; width:${progress}%"></div>
+        </div>
+      </div>
+      <div class="p-6 max-w-3xl mx-auto">
+        ${q.image ? `
+          <div class="${q.imagePosition === 'top' ? 'text-center' : ''}">
+            <img src="${q.image}" 
+                 class="test-question-image ${q.imagePosition}" 
+                 style="max-width: ${maxWidth}px; width: ${imageSize}%"
+                 alt="Question image">
+          </div>
+        ` : ''}
+        <h2 class="text-xl font-bold mb-4" style="color:${state.config.secondaryColor}">${q.question}</h2>
+        <div class="space-y-3">
+          ${q.options.map((opt, idx) => `
+            <button onclick="submitAnswer(${idx})" class="w-full p-4 rounded border-2 text-left transition hover:shadow-md ${state.answers[state.currentQuestion] === idx ? 'font-bold' : ''}" 
+              style="border-color:${state.config.primaryColor}; background:${state.answers[state.currentQuestion] === idx ? state.config.primaryColor : 'white'}; color:${state.answers[state.currentQuestion] === idx ? 'white' : state.config.secondaryColor}">
+              ${String.fromCharCode(65 + idx)}. ${opt}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderResults(app) {
+  if (!state.testResults) {
+    goHome();
+    return;
+  }
+  
+  const passed = state.testResults.percentage >= 70;
+  const categoryScores = state.testResults.categoryScores;
+  
+  // Separate correct and incorrect answers for detailed review
+  const correctAnswers = state.testResults.results.filter(r => r.isCorrect);
+  const incorrectAnswers = state.testResults.results.filter(r => !r.isCorrect);
+  
+  app.innerHTML = `
+    <div class="min-h-screen p-6" style="background:${state.config.backgroundColor}">
+      <div class="p-6" style="background:${state.config.primaryColor}">
+        <h1 class="text-2xl font-bold text-white text-center">${state.config.appName}</h1>
+      </div>
+      <div class="p-6 max-w-6xl mx-auto">
+        <!-- Overall Results -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6 border-2" style="border-color:${state.config.primaryColor}">
+          <h2 class="text-3xl font-bold text-center mb-4" style="color:${state.config.secondaryColor}">Test Complete!</h2>
+          <div class="text-center mb-6">
+            <div class="text-5xl font-bold mb-2" style="color:${state.config.primaryColor}">${state.testResults.percentage}%</div>
+            <div class="text-lg">${state.testResults.score} out of ${state.testResults.total} correct</div>
+          </div>
+          <div class="text-center text-xl font-bold mb-6" style="color:${passed ? '#10B981' : '#EF4444'}">
+            ${passed ? '✅ PASSED' : '❌ NOT PASSED'}
+          </div>
+          
+          <!-- Category Breakdown -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="text-center p-4 border rounded-lg">
+              <h3 class="font-bold text-lg mb-2">Rules</h3>
+              <div class="text-2xl font-bold" style="color:${state.config.primaryColor}">
+                ${categoryScores.rules.score}/${categoryScores.rules.total}
+              </div>
+              <div class="text-sm text-gray-600">
+                ${Math.round((categoryScores.rules.score / categoryScores.rules.total) * 100)}%
+              </div>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+              <h3 class="font-bold text-lg mb-2">Signs</h3>
+              <div class="text-2xl font-bold" style="color:${state.config.primaryColor}">
+                ${categoryScores.signs.score}/${categoryScores.signs.total}
+              </div>
+              <div class="text-sm text-gray-600">
+                ${Math.round((categoryScores.signs.score / categoryScores.signs.total) * 100)}%
+              </div>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+              <h3 class="font-bold text-lg mb-2">Controls</h3>
+              <div class="text-2xl font-bold" style="color:${state.config.primaryColor}">
+                ${categoryScores.controls.score}/${categoryScores.controls.total}
+              </div>
+              <div class="text-sm text-gray-600">
+                ${Math.round((categoryScores.controls.score / categoryScores.controls.total) * 100)}%
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Detailed Results -->
+        <div class="results-grid gap-6">
+          <!-- Correct Answers -->
+          <div class="bg-white rounded-lg shadow-lg p-6 border-2 border-green-200">
+            <h3 class="text-xl font-bold mb-4 text-green-700">✅ Correct Answers (${correctAnswers.length})</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              ${correctAnswers.map(result => `
+                <div class="p-3 border border-green-200 rounded bg-green-50">
+                  <p class="font-semibold text-sm">Q${result.questionNumber}: ${result.question}</p>
+                  ${result.image ? `<img src="${result.image}" class="max-w-full h-auto rounded mt-2" style="max-width: ${Math.min(300, (result.imageSize || 100) / 100 * 300)}px">` : ''}
+                  <p class="text-sm text-green-700 mt-1">Your answer: ${String.fromCharCode(65 + result.userAnswer)}. ${result.options[result.userAnswer]}</p>
+                  ${result.isControl ? '<span class="category-badge bg-yellow-500 text-black text-xs">CONTROL</span>' : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Incorrect Answers -->
+          <div class="bg-white rounded-lg shadow-lg p-6 border-2 border-red-200">
+            <h3 class="text-xl font-bold mb-4 text-red-700">❌ Incorrect Answers (${incorrectAnswers.length})</h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              ${incorrectAnswers.map(result => `
+                <div class="p-3 border border-red-200 rounded bg-red-50">
+                  <p class="font-semibold text-sm">Q${result.questionNumber}: ${result.question}</p>
+                  ${result.image ? `<img src="${result.image}" class="max-w-full h-auto rounded mt-2" style="max-width: ${Math.min(300, (result.imageSize || 100) / 100 * 300)}px">` : ''}
+                  <p class="text-sm text-red-700 mt-1">Your answer: ${String.fromCharCode(65 + result.userAnswer)}. ${result.options[result.userAnswer]}</p>
+                  <p class="text-sm text-green-700 mt-1">Correct answer: ${String.fromCharCode(65 + result.correctAnswer)}. ${result.options[result.correctAnswer]}</p>
+                  ${result.isControl ? '<span class="category-badge bg-yellow-500 text-black text-xs">CONTROL</span>' : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="goHome()" class="w-full mt-6 p-4 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">Back to Home</button>
+      </div>
+    </div>`;
+}
+
+function renderAdminLogin(app) {
+  app.innerHTML = `
+    <div class="min-h-screen flex items-center justify-center blur-bg" style="background: rgba(0,0,0,0.18)">
+      <div id="adminCard" class="login-fade bg-white rounded-xl shadow-xl p-8 w-full max-w-sm text-center">
+        ${state.config.logo ? `<img src="${state.config.logo}" class="mx-auto h-16 mb-4 object-contain">` : ''}
+        <h3 class="text-xl font-bold mb-4" style="color:${state.config.secondaryColor}">Admin Panel</h3>
+        <input id="adminPw" type="password" placeholder="Enter password" class="w-full p-3 border rounded mb-4" />
+        <div class="flex gap-2">
+          <button onclick="tryAdminLogin(document.getElementById('adminPw').value)" class="flex-1 p-3 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">Login</button>
+          <button onclick="goHome()" class="flex-0 p-3 rounded border transition hover:opacity-90" style="border-color:${state.config.primaryColor}; color:${state.config.secondaryColor}">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAdmin(app) {
+  const tabs = [
+    { id: 'questions', label: 'Question Bank' },
+    { id: 'statistics', label: 'Test Statistics' },
+    { id: 'settings', label: 'Settings' }
+  ];
+  
+  const tabButtons = tabs.map(tab => `
+    <button onclick="switchAdminTab('${tab.id}')" 
+      class="px-4 py-2 rounded font-bold transition ${state.adminPage === tab.id ? 'text-white' : ''}"
+      style="background:${state.adminPage === tab.id ? state.config.primaryColor : '#E5E7EB'}; color:${state.adminPage === tab.id ? 'white' : state.config.secondaryColor}">
+      ${tab.label}
+    </button>
+  `).join('');
+  
+  app.innerHTML = `
+    <div class="min-h-screen" style="background:${state.config.backgroundColor}">
+      <div class="p-6" style="background:${state.config.primaryColor}">
+        <button onclick="goHome()" class="text-white flex items-center mb-2">
+          <span class="mr-2">←</span> Back to Home
+        </button>
+        <h1 class="text-2xl font-bold text-white text-center">Admin Panel</h1>
+      </div>
+      <div class="p-6">
+        <div class="flex gap-2 mb-6 overflow-auto pb-2">
+          ${tabButtons}
+        </div>
+        <div id="adminContent">
+          ${renderAdminContent()}
+        </div>
+      </div>
+    </div>`;
+  
+  setupFirebaseListeners();
+}
+
+function switchAdminTab(tab) {
+  state.adminPage = tab;
+  state.editingQuestion = null;
+  
+  firebaseListeners.forEach(unsubscribe => unsubscribe());
+  firebaseListeners = [];
+  
+  renderAdminContent();
+  setupFirebaseListeners();
+}
+
+function renderAdminQuestions() {
+  const questionTypes = [
+    { id: 'rules', label: 'Rules Questions', count: state.questions.rules.length },
+    { id: 'signs', label: 'Signs Questions', count: state.questions.signs.length },
+    { id: 'controls_code1', label: 'Code 1 Controls', count: state.questions.controls_code1.length },
+    { id: 'controls_code2', label: 'Code 2 Controls', count: state.questions.controls_code2.length },
+    { id: 'controls_code3', label: 'Code 3 Controls', count: state.questions.controls_code3.length }
+  ];
+  
+  const typeButtons = questionTypes.map(type => `
+    <button onclick="state.selectedQuestionType='${type.id}'; state.editingQuestion=null; renderAdminContent();" 
+      class="px-4 py-3 rounded font-bold transition text-left ${state.selectedQuestionType === type.id ? 'text-white' : ''}"
+      style="background:${state.selectedQuestionType === type.id ? state.config.primaryColor : '#E5E7EB'}; color:${state.selectedQuestionType === type.id ? 'white' : state.config.secondaryColor}">
+      ${type.label}
+      <div class="text-sm font-normal mt-1 ${state.selectedQuestionType === type.id ? 'text-white' : 'text-gray-600'}">
+        ${type.count} questions
+      </div>
+    </button>
+  `).join('');
+  
+  if (state.editingQuestion) {
+    const q = state.editingQuestion;
+    const currentType = questionTypes.find(t => t.id === state.selectedQuestionType);
+    
+    return `
+      <div class="mb-4">
+        <h3 class="text-lg font-bold" style="color:${state.config.secondaryColor}">Editing: ${currentType.label}</h3>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow mb-4">
+        <h3 class="font-bold mb-4 text-xl" style="color:${state.config.secondaryColor}">${q.id ? 'Edit' : 'Add'} Question</h3>
+        <textarea id="qText" class="w-full p-3 border rounded mb-3" rows="3" placeholder="Enter question text">${q.question}</textarea>
+        ${[0, 1, 2, 3].map(i => `
+          <input type="text" class="w-full p-3 border rounded mb-2" placeholder="Option ${i + 1}" 
+            value="${q.options[i] || ''}" oninput="state.editingQuestion.options[${i}]=this.value">
+        `).join('')}
+        <select class="w-full p-3 border rounded mb-3" onchange="state.editingQuestion.correct=parseInt(this.value)">
+          ${[0, 1, 2, 3].map(i => `
+            <option value="${i}" ${q.correct === i ? 'selected' : ''}>Correct Answer: Option ${i + 1}</option>
+          `).join('')}
+        </select>
+        
+        <!-- Enhanced Drag & Drop Image Editor -->
+        <div class="mb-4">
+          <label class="block font-bold mb-2">Question Image (optional, max 5MB)</label>
+          <input type="file" accept="image/*" onchange="handleImageForEditing(event)" class="w-full p-2 border rounded mb-3">
+          
+          ${q.image ? `
+            <div class="editor-container">
+              <div class="editor-preview">
+                <!-- Drop Zones -->
+                <div class="drop-zone top" data-position="top">
+                  <div class="drop-zone-label">Drop image here for top position</div>
+                </div>
+                <div class="drop-zone left" data-position="left">
+                  <div class="drop-zone-label">Drop here for left position</div>
+                </div>
+                <div class="drop-zone right" data-position="right">
+                  <div class="drop-zone-label">Drop here for right position</div>
+                </div>
+                
+                <!-- Draggable Image -->
+                <img id="draggableImage" 
+                     src="${q.image}" 
+                     class="draggable-image" 
+                     style="
+                       width: ${q.imageSize}px; 
+                       left: ${q.imageX}%; 
+                       top: ${q.imageY}%;
+                       position: absolute;
+                     "
+                     draggable="true">
+                <div id="resizeHandle" class="resize-handle"></div>
+              </div>
+              
+              <div class="editor-controls">
+                <div class="control-group">
+                  <label>Image Size</label>
+                  <input type="range" min="50" max="300" value="${q.imageSize}" 
+                         oninput="updateImageSize(this.value)" class="size-slider">
+                  <div class="size-value" id="sizeValue">${q.imageSize}px</div>
+                </div>
+                
+                <div class="control-group">
+                  <label>Current Position</label>
+                  <div style="padding: 1rem; background: white; border-radius: 6px; text-align: center;">
+                    <div>X: ${Math.round(q.imageX)}%</div>
+                    <div>Y: ${Math.round(q.imageY)}%</div>
+                    <div>Area: ${q.imagePosition}</div>
+                  </div>
+                </div>
+                
+                <div class="control-group">
+                  <label>Instructions</label>
+                  <div style="font-size: 0.875rem; color: #6b7280;">
+                    <p>• Drag the image to position it</p>
+                    <p>• Drag the blue handle to resize</p>
+                    <p>• Drop in zones for auto-positioning</p>
+                    <p>• Use slider for precise size control</p>
+                  </div>
+                </div>
+                
+                <button onclick="removeImage()" class="w-full mt-3 p-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                  🗑️ Remove Image
+                </button>
+              </div>
+            </div>
+          ` : '<p class="text-gray-500">No image uploaded. Upload an image to use the drag & drop editor.</p>'}
+        </div>
+        
+        <div class="flex gap-2">
+          <button onclick="state.editingQuestion.question=document.getElementById('qText').value; saveQuestion()" 
+            class="px-6 py-3 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">
+            Save Question
+          </button>
+          <button onclick="state.editingQuestion=null; renderAdminContent()" 
+            class="px-6 py-3 rounded bg-gray-500 text-white font-bold transition hover:opacity-90">
+            Cancel
+          </button>
+        </div>
+      </div>`;
+  } else {
+    const questions = state.questions[state.selectedQuestionType] || [];
+    const currentType = questionTypes.find(t => t.id === state.selectedQuestionType);
+    
+    return `
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        ${typeButtons}
+      </div>
+      
+      ${currentType ? `
+        <div class="mb-6">
+          <h3 class="text-xl font-bold mb-2" style="color:${state.config.secondaryColor}">${currentType.label}</h3>
+          <div class="flex gap-4 items-center mb-4">
+            <button onclick="addQuestion()" class="px-6 py-3 rounded text-white font-bold transition hover:opacity-90" style="background:${state.config.primaryColor}">
+              + Add New Question
+            </button>
+            <div class="text-lg font-bold">
+              Total: ${questions.length} questions
+            </div>
+          </div>
+        </div>
+        
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          ${questions.length === 0 ? `
+            <div class="bg-white p-6 rounded-lg shadow text-center">
+              <p class="text-gray-500">No questions found. Add your first question!</p>
+            </div>
+          ` : questions.map(q => `
+            <div class="question-item bg-white p-4 rounded-lg shadow flex justify-between items-start">
+              <div class="flex-1">
+                <p class="font-bold mb-1">${q.question}</p>
+                <div class="flex items-center text-sm text-gray-600">
+                  <span>Correct: ${q.options[q.correct]}</span>
+                  ${q.image ? `<span class="ml-3 text-blue-500">🖼️ Image (${q.imagePosition})</span>` : ''}
+                </div>
+              </div>
+              <div class="flex gap-2 ml-4">
+                <button onclick="previewQuestion('${q.id}')" 
+                  class="p-2 rounded text-white transition hover:opacity-90" style="background:#8B5CF6">
+                  👁️ Preview
+                </button>
+                <button onclick="editQuestion('${q.id}')" 
+                  class="p-2 rounded text-white transition hover:opacity-90" style="background:${state.config.primaryColor}">
+                  ✏️ Edit
+                </button>
+                <button onclick="deleteQuestion('${q.id}')" 
+                  class="p-2 rounded bg-red-500 text-white transition hover:opacity-90">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
+  }
+}
+
+// FIXED: Complete renderAdminStatistics function
+function renderAdminStatistics() {
+  const historyEntries = Object.entries(state.testHistory);
+  
+  if (historyEntries.length === 0) {
+    return `
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-2xl font-bold mb-4" style="color:${state.config.secondaryColor}">Test Statistics</h2>
+        <p class="text-gray-500">No test data available yet.</p>
+      </div>`;
+  }
+  
+  return `
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-2xl font-bold mb-4" style="color:${state.config.secondaryColor}">Test Statistics</h2>
+      <div class="space-y-4 max-h-96 overflow-y-auto">
+        ${historyEntries.map(([id, tests]) => `
+          <div class="border rounded-lg p-4">
+            <h3 class="font-bold text-lg mb-2">ID: ${id}</h3>
+            <p class="mb-2">Total Tests: ${tests.length}</p>
+            <div class="space-y-3">
+              ${tests.slice(-5).map((t, index) => `
+                <div class="border-t pt-3 ${index === 0 ? 'border-t-0 pt-0' : ''}">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p><strong>Date:</strong> ${new Date(t.date).toLocaleString()}</p>
+                      <p><strong>License:</strong> ${t.licenseType.toUpperCase()}</p>
+                      <p><strong>Score:</strong> ${t.score}/${t.total} (${t.percentage}%)</p>
+                      <p><strong>Result:</strong> ${t.percentage >= 70 ? 'PASSED' : 'FAILED'}</p>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function renderAdminSettings() {
+  return `
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-2xl font-bold mb-4" style="color:${state.config.secondaryColor}">App Settings</h2>
+      
+      <div class="space-y-6">
+        <!-- App Name -->
+        <div>
+          <label class="block font-bold mb-2">App Name</label>
+          <input type="text" value="${state.config.appName}" 
+                 oninput="state.config.appName=this.value; saveState()"
+                 class="w-full p-3 border rounded">
+        </div>
+        
+        <!-- Color Settings -->
+        <div>
+          <label class="block font-bold mb-2">Primary Color</label>
+          <div class="pickr-primary"></div>
+        </div>
+        
+        <div>
+          <label class="block font-bold mb-2">Secondary Color</label>
+          <div class="pickr-secondary"></div>
+        </div>
+        
+        <div>
+          <label class="block font-bold mb-2">Background Color</label>
+          <div class="pickr-background"></div>
+        </div>
+        
+        <!-- Logo Upload -->
+        <div>
+          <label class="block font-bold mb-2">App Logo</label>
+          <input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="w-full p-2 border rounded mb-3">
+          ${state.config.logo ? `
+            <div class="flex items-center gap-4">
+              <img src="${state.config.logo}" class="h-16 object-contain border rounded">
+              <button onclick="removeLogo()" class="p-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                Remove Logo
+              </button>
+            </div>
+          ` : '<p class="text-gray-500">No logo uploaded</p>'}
+        </div>
+        
+        <!-- Firebase Status -->
+        <div>
+          <label class="block font-bold mb-2">Firebase Status</label>
+          <div class="p-3 border rounded ${firebaseInitialized ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+            ${firebaseInitialized ? '✅ Connected to Firebase' : '❌ Firebase not connected'}
+          </div>
+        </div>
+        
+        <!-- Data Management -->
+        <div>
+          <label class="block font-bold mb-2">Data Management</label>
+          <div class="flex gap-2">
+            <button onclick="exportData()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+              Export Data
+            </button>
+            <button onclick="importData()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">
+              Import Data
+            </button>
+            <button onclick="resetData()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+              Reset Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Initialize the app
+loadState();
+</script>
+</body>
+</html>
