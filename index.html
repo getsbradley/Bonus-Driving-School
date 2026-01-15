@@ -1,0 +1,4994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#EF4444">
+  <title>Bonus Driving School — Enhanced</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
+  <style>
+    /* MOBILE-FIRST STYLES */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    body { 
+      margin:0; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', ui-sans-serif, system-ui, sans-serif;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Mobile-friendly touch targets */
+    button, 
+    .btn,
+    .role-button,
+    .quick-action-btn,
+    .image-action-btn,
+    .position-btn {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    input, 
+    select, 
+    textarea {
+      font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
+    
+    /* Safe area insets for modern phones */
+    @supports (padding: max(0px)) {
+      .safe-top {
+        padding-top: max(12px, env(safe-area-inset-top));
+      }
+      .safe-bottom {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+      .safe-left {
+        padding-left: max(12px, env(safe-area-inset-left));
+      }
+      .safe-right {
+        padding-right: max(12px, env(safe-area-inset-right));
+      }
+    }
+    
+    .blur-bg { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .login-fade { animation: fadeIn 360ms ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .animate-shake { animation: shake 0.5s linear; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .loading { opacity: 0.7; pointer-events: none; }
+    .question-item { transition: all 0.2s ease; }
+    .question-item:hover { transform: translateY(-2px); }
+    .category-badge { 
+      display: inline-block; 
+      padding: 2px 8px; 
+      border-radius: 12px; 
+      font-size: 0.75rem; 
+      font-weight: 600; 
+      margin-left: 8px;
+    }
+    
+    /* Mobile-optimized results grid */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+      .results-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    /* Role Selection Page - MOBILE OPTIMIZED */
+    .role-selection-page {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    }
+    
+    .role-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    
+    @media (max-width: 360px) {
+      .role-card {
+        padding: 1rem;
+      }
+    }
+    
+    .role-title {
+      font-size: 1.75rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    @media (min-width: 768px) {
+      .role-title {
+        font-size: 2.5rem;
+      }
+    }
+    
+    .role-subtitle {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    
+    .role-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    
+    .role-button {
+      padding: 1.25rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    
+    .role-button.student {
+      background: linear-gradient(135deg, #EF4444, #DC2626);
+      color: white;
+    }
+    
+    .role-button.staff {
+      background: linear-gradient(135deg, #000000, #374151);
+      color: white;
+    }
+    
+    .role-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    /* Mobile-optimized header */
+    .mobile-header {
+      padding: 1rem;
+      background: #EF4444;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    
+    .mobile-back-btn {
+      color: white;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      padding: 0.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+    }
+    
+    .mobile-title {
+      color: white;
+      font-size: 1.25rem;
+      font-weight: bold;
+      flex: 1;
+      text-align: center;
+      margin-right: 2rem;
+    }
+    
+    /* Mobile content area */
+    .mobile-content {
+      padding: 1rem;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    @media (min-width: 640px) {
+      .mobile-content {
+        padding: 1.5rem;
+      }
+    }
+    
+    /* Mobile cards */
+    .mobile-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      border: 1px solid #e5e7eb;
+    }
+    
+    /* Mobile buttons */
+    .mobile-btn {
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+    }
+    
+    .mobile-btn-primary {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .mobile-btn-primary:active {
+      background: #DC2626;
+      transform: scale(0.98);
+    }
+    
+    /* Mobile input */
+    .mobile-input {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s ease;
+    }
+    
+    .mobile-input:focus {
+      outline: none;
+      border-color: #EF4444;
+    }
+    
+    /* Mobile test interface */
+    .mobile-question-number {
+      color: white;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .mobile-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .mobile-progress-fill {
+      height: 100%;
+      background: white;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    
+    .mobile-question-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-option-btn {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      background: white;
+      text-align: left;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .mobile-option-btn:active {
+      transform: scale(0.98);
+    }
+    
+    .mobile-option-btn.selected {
+      background: #EF4444;
+      color: white;
+      border-color: #EF4444;
+    }
+    
+    /* Mobile results */
+    .mobile-results-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .mobile-score {
+      font-size: 3.5rem;
+      font-weight: bold;
+      color: #EF4444;
+      margin: 0.5rem 0;
+    }
+    
+    /* Mobile admin */
+    .mobile-admin-tabs {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    
+    .mobile-admin-tabs::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .mobile-tab-btn {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    
+    .mobile-tab-btn.active {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .mobile-tab-btn:not(.active) {
+      background: #E5E7EB;
+      color: #374151;
+    }
+    
+    /* Mobile question editor */
+    .mobile-editor-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    @media (min-width: 1024px) {
+      .mobile-editor-container {
+        flex-direction: row;
+      }
+    }
+    
+    .mobile-editor-form {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+    }
+    
+    .mobile-preview-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+      font-size: 0.875rem;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 0.875rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      font-size: 1rem;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #EF4444;
+    }
+    
+    .option-input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .option-letter {
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+    
+    .option-input {
+      flex: 1;
+    }
+    
+    .correct-option {
+      background: #10B981 !important;
+      color: white !important;
+    }
+    
+    .quick-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    
+    .btn {
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex: 1;
+      font-size: 1rem;
+    }
+    
+    .btn-primary {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .btn-primary:active {
+      background: #DC2626;
+      transform: scale(0.98);
+    }
+    
+    .btn-secondary {
+      background: #6B7280;
+      color: white;
+    }
+    
+    .btn-secondary:active {
+      background: #4B5563;
+      transform: scale(0.98);
+    }
+    
+    /* Question Preview */
+    .question-preview {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    
+    .preview-question-text {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    
+    .preview-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .preview-option {
+      padding: 0.875rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .preview-option.correct {
+      border-color: #10B981;
+      background: #f0fdf4;
+    }
+    
+    .preview-option-label {
+      font-weight: 600;
+      margin-right: 0.5rem;
+      color: #EF4444;
+    }
+    
+    /* Image Upload - Mobile Optimized */
+    .image-upload-section {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1.25rem;
+      background: #f9fafb;
+      margin-bottom: 1.25rem;
+    }
+    
+    .image-upload-area {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+      background: #f9fafb;
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      color: #9CA3AF;
+    }
+    
+    .upload-text {
+      color: #6B7280;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+    
+    .upload-subtext {
+      color: #9CA3AF;
+      font-size: 0.75rem;
+    }
+    
+    .image-preview-container {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    
+    .image-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+    
+    .image-preview.visible {
+      display: inline-block;
+    }
+    
+    .image-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    
+    .image-action-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .image-action-btn.remove {
+      background: #FEF2F2;
+      border-color: #FECACA;
+      color: #DC2626;
+    }
+    
+    .image-position-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .position-btn {
+      padding: 0.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .position-btn.active {
+      border-color: #EF4444;
+      background: #FEF2F2;
+      color: #EF4444;
+    }
+    
+    .size-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #e5e7eb;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    /* Question list */
+    .mobile-question-list {
+      max-height: 50vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .question-item {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 0.75rem;
+      border: 1px solid #e5e7eb;
+    }
+    
+    /* SEARCH COMPONENTS - MOBILE OPTIMIZED */
+    .search-container {
+      margin-bottom: 1.5rem;
+    }
+    
+    .search-input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 0.875rem 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: #EF4444;
+    }
+    
+    .search-btn {
+      padding: 0.875rem 1.5rem;
+      background: #EF4444;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: 60px;
+    }
+    
+    .search-btn:active {
+      background: #DC2626;
+      transform: scale(0.98);
+    }
+    
+    .search-clear-btn {
+      padding: 0.875rem 1rem;
+      background: #6B7280;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    
+    .search-clear-btn:active {
+      background: #4B5563;
+      transform: scale(0.98);
+    }
+    
+    .search-results-info {
+      padding: 0.75rem;
+      background: #f3f4f6;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6B7280;
+    }
+    
+    .search-no-results {
+      text-align: center;
+      padding: 2rem;
+      color: #9CA3AF;
+    }
+    
+    /* Student Test Details - Mobile Optimized */
+    .student-test-details {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .student-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #f3f4f6;
+    }
+    
+    .student-id {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    
+    .test-count {
+      background: #EF4444;
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .test-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .test-item {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .test-item:active {
+      transform: scale(0.98);
+    }
+    
+    .test-summary {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .test-summary-item {
+      font-size: 0.875rem;
+    }
+    
+    .test-summary-label {
+      font-weight: 600;
+      color: #6B7280;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    
+    .test-summary-value {
+      color: #1f2937;
+    }
+    
+    .test-result {
+      font-weight: bold;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      display: inline-block;
+    }
+    
+    .test-result.pass {
+      background: #10B981;
+      color: white;
+    }
+    
+    .test-result.fail {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .view-details-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #3B82F6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    
+    .view-details-btn:active {
+      background: #2563EB;
+      transform: scale(0.98);
+    }
+    
+    /* IMPROVED: Test Analysis Modal - Bigger, Cleaner, More User-Friendly */
+    .analysis-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .analysis-content {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 95vw;
+      max-height: 95vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .analysis-header {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: white;
+      border-radius: 20px 20px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .analysis-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+    }
+    
+    .close-analysis-btn {
+      background: rgba(255,255,255,0.25);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: all 0.2s ease;
+      font-weight: bold;
+    }
+    
+    .close-analysis-btn:active {
+      background: rgba(255,255,255,0.4);
+      transform: scale(0.95);
+    }
+    
+    .analysis-body {
+      padding: 1.5rem;
+    }
+    
+    .analysis-score-display {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 16px;
+      border: 3px solid #e5e7eb;
+    }
+    
+    .analysis-percentage {
+      font-size: 4rem;
+      font-weight: 900;
+      margin: 0.5rem 0;
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    
+    .analysis-score-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+    
+    .analysis-pass-fail {
+      font-size: 1.5rem;
+      font-weight: 800;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      display: inline-block;
+      margin-top: 0.5rem;
+    }
+    
+    .analysis-pass-fail.pass {
+      background: #10B981;
+      color: white;
+    }
+    
+    .analysis-pass-fail.fail {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .analysis-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+      text-align: center;
+      padding: 1.25rem;
+      background: white;
+      border-radius: 12px;
+      border: 2px solid #f3f4f6;
+      transition: all 0.2s ease;
+    }
+    
+    .stat-item:hover {
+      transform: translateY(-2px);
+      border-color: #EF4444;
+      box-shadow: 0 5px 15px rgba(239, 68, 68, 0.1);
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #1f2937;
+      display: block;
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.95rem;
+      color: #6B7280;
+      font-weight: 500;
+    }
+    
+    .analysis-section {
+      margin-bottom: 2rem;
+    }
+    
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      padding-bottom: 0.75rem;
+      border-bottom: 3px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 24px;
+      background: #EF4444;
+      border-radius: 3px;
+    }
+    
+    .incorrect-questions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .incorrect-question {
+      background: white;
+      border: 2px solid #FECACA;
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.2s ease;
+    }
+    
+    .incorrect-question:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(239, 68, 68, 0.1);
+    }
+    
+    .question-number {
+      display: inline-block;
+      background: #EF4444;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 32px;
+      font-weight: bold;
+      margin-right: 0.75rem;
+      font-size: 0.9rem;
+    }
+    
+    .question-text {
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: #1f2937;
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+    
+    .answer-comparison {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: #f8fafc;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    
+    .answer-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 1rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+    }
+    
+    .answer-row.user-answer-row {
+      background: #FEF2F2;
+      border-left: 4px solid #EF4444;
+    }
+    
+    .answer-row.correct-answer-row {
+      background: #f0fdf4;
+      border-left: 4px solid #10B981;
+    }
+    
+    .answer-label {
+      font-weight: 700;
+      min-width: 80px;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .user-answer .answer-label {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .correct-answer .answer-label {
+      background: #10B981;
+      color: white;
+    }
+    
+    .user-answer-text {
+      color: #DC2626;
+      font-weight: 600;
+      flex: 1;
+      padding: 0.25rem 0;
+    }
+    
+    .correct-answer-text {
+      color: #059669;
+      font-weight: 600;
+      flex: 1;
+      padding: 0.25rem 0;
+    }
+    
+    .category-badge-analysis {
+      display: inline-block;
+      padding: 0.5rem 0.75rem;
+      background: #E5E7EB;
+      color: #374151;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+    }
+    
+    /* Sync Status - Mobile Optimized */
+    .sync-status {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      max-width: calc(100% - 32px);
+    }
+    
+    .sync-status.syncing {
+      background: #3B82F6;
+      color: white;
+    }
+    
+    .sync-status.synced {
+      background: #10B981;
+      color: white;
+    }
+    
+    .sync-status.offline {
+      background: #6B7280;
+      color: white;
+    }
+    
+    .sync-status.error {
+      background: #EF4444;
+      color: white;
+    }
+    
+    /* License buttons grid */
+    .license-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    @media (min-width: 640px) {
+      .license-grid {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+      }
+    }
+    
+    /* Test image optimization */
+    .test-question-image {
+      max-width: 100% !important;
+      height: auto;
+      border-radius: 8px;
+      margin: 0 auto 1rem auto;
+      display: block;
+    }
+    
+    .test-question-image.left,
+    .test-question-image.right {
+      float: none;
+      margin: 0 auto 1rem auto;
+      max-width: 100% !important;
+    }
+    
+    @media (min-width: 768px) {
+      .test-question-image.left {
+        float: left;
+        margin: 0 1rem 1rem 0;
+        max-width: 40% !important;
+      }
+      
+      .test-question-image.right {
+        float: right;
+        margin: 0 0 1rem 1rem;
+        max-width: 40% !important;
+      }
+    }
+    
+    /* Modal overlay for mobile */
+    .mobile-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    
+    .mobile-modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Keyboard avoidance */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .role-selection-page {
+        padding: 0.5rem;
+      }
+      .mobile-content {
+        padding: 0.75rem;
+      }
+    }
+    
+    /* Prevent text selection on interactive elements */
+    .no-select {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    
+    /* Size warning */
+    .size-warning {
+      border: 2px solid #F59E0B;
+      background: #FEF3C7;
+    }
+    
+    /* Size info badge */
+    .size-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #E5E7EB;
+      color: #374151;
+    }
+    
+    .size-badge.large {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+    
+    .size-badge.warning {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+    
+    /* Debug styles */
+    .debug-info {
+      font-size: 0.75rem;
+      color: #6B7280;
+      background: #F3F4F6;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+    
+    .duplicate-warning {
+      background: #FEF3C7;
+      border: 1px solid #F59E0B;
+      padding: 8px;
+      border-radius: 6px;
+      margin: 8px 0;
+      font-size: 0.875rem;
+    }
+    
+    /* IMPROVED: Test summary grid */
+    .test-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-summary-card {
+      background: white;
+      border: 2px solid #f3f4f6;
+      border-radius: 12px;
+      padding: 1rem;
+      transition: all 0.2s ease;
+    }
+    
+    .test-summary-card:hover {
+      border-color: #EF4444;
+      transform: translateY(-2px);
+    }
+    
+    .test-summary-card-label {
+      font-size: 0.85rem;
+      color: #6B7280;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .test-summary-card-value {
+      font-size: 1.1rem;
+      color: #1f2937;
+      font-weight: 700;
+    }
+    
+    /* Progress bar for categories */
+    .category-progress {
+      margin-bottom: 1rem;
+    }
+    
+    .category-progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+    
+    .category-progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .category-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    
+    .category-progress-fill.rules {
+      background: linear-gradient(90deg, #EF4444, #DC2626);
+    }
+    
+    .category-progress-fill.signs {
+      background: linear-gradient(90deg, #3B82F6, #2563EB);
+    }
+    
+    .category-progress-fill.controls {
+      background: linear-gradient(90deg, #10B981, #059669);
+    }
+    
+    /* Empty state for analysis */
+    .analysis-empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 2px dashed #e5e7eb;
+    }
+    
+    .analysis-empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    
+    .analysis-empty-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #6B7280;
+      margin-bottom: 0.5rem;
+    }
+    
+    .analysis-empty-text {
+      color: #9CA3AF;
+      font-size: 0.95rem;
+    }
+    
+    /* NEW: Cache warning styles */
+    .cache-warning {
+      border: 2px solid #F59E0B;
+      background: #FEF3C7;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .cache-warning-title {
+      font-weight: bold;
+      color: #92400E;
+      margin-bottom: 4px;
+    }
+    
+    .cache-warning-text {
+      font-size: 14px;
+      color: #92400E;
+    }
+  </style>
+</head>
+<body class="no-select">
+  <div id="app"></div>
+  
+  <!-- Sync Status Indicator -->
+  <div id="syncStatus" class="sync-status offline" style="display: none;">
+    <span id="syncIcon">📡</span>
+    <span id="syncText">Checking...</span>
+  </div>
+  
+<script>
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyD4En5Xe4HKjUd0LYrsmHHeV2ZjFyjxnBU",
+  authDomain: "bonus-driving-school-aabd2.firebaseapp.com",
+  projectId: "bonus-driving-school-aabd2",
+  storageBucket: "bonus-driving-school-aabd2.firebasestorage.app",
+  messagingSenderId: "72558421307",
+  appId: "1:72558421307:web:e9d3450e78e8d4e13d431e",
+  measurementId: "G-WT9KQ340DG"
+};
+
+// Initialize Firebase
+let db, storage, firebaseInitialized = false;
+let lastSyncTime = null;
+
+// NEW: Search state
+const searchState = {
+  searchTerm: '',
+  searchResults: [],
+  selectedStudent: null,
+  selectedTest: null,
+  isSearching: false
+};
+
+// Simple Firebase sync status indicator
+function updateSyncStatus(type, message = '') {
+  const syncElement = document.getElementById('syncStatus');
+  const syncIcon = document.getElementById('syncIcon');
+  const syncText = document.getElementById('syncText');
+  
+  if (!syncElement) return;
+  
+  syncElement.style.display = 'flex';
+  
+  // Remove all existing classes
+  syncElement.className = 'sync-status';
+  
+  switch(type) {
+    case 'syncing':
+      syncElement.classList.add('syncing');
+      syncIcon.textContent = '🔄';
+      syncText.textContent = 'Syncing...';
+      break;
+    case 'synced':
+      syncElement.classList.add('synced');
+      syncIcon.textContent = '✓';
+      syncText.textContent = message ? `Synced ${message}` : 'Synced';
+      lastSyncTime = new Date();
+      
+      // Hide after 3 seconds
+      setTimeout(() => {
+        if (syncElement.classList.contains('synced')) {
+          syncElement.style.display = 'none';
+        }
+      }, 3000);
+      break;
+    case 'offline':
+      syncElement.classList.add('offline');
+      syncIcon.textContent = '📡';
+      syncText.textContent = message || 'Offline';
+      break;
+    case 'error':
+      syncElement.classList.add('error');
+      syncIcon.textContent = '⚠️';
+      syncText.textContent = message || 'Sync Error';
+      break;
+    case 'connected':
+      syncElement.classList.add('synced');
+      syncIcon.textContent = '✓';
+      syncText.textContent = 'Connected';
+      
+      setTimeout(() => {
+        if (syncElement.classList.contains('synced')) {
+          syncElement.style.display = 'none';
+        }
+      }, 2000);
+      break;
+  }
+}
+
+function initializeFirebase() {
+  try {
+    if (typeof firebase === 'undefined') {
+      console.error('Firebase scripts not loaded yet');
+      updateSyncStatus('offline', 'Firebase not loaded');
+      return false;
+    }
+    
+    // Check if already initialized
+    if (firebase.apps.length > 0) {
+      firebaseInitialized = true;
+      db = firebase.firestore();
+      storage = firebase.storage();
+      console.log('Firebase already initialized');
+      updateSyncStatus('connected');
+      return true;
+    }
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    storage = firebase.storage();
+    firebaseInitialized = true;
+    
+    console.log('Firebase initialized successfully');
+    updateSyncStatus('connected');
+    return true;
+  } catch (e) {
+    console.error('Firebase initialization failed:', e);
+    firebaseInitialized = false;
+    updateSyncStatus('error', 'Init Failed');
+    return false;
+  }
+}
+
+// Application state
+const state = {
+  page: 'role-selection',
+  selectedLicense: null,
+  idNumber: '',
+  currentTest: [],
+  currentQuestion: 0,
+  answers: [],
+  testResults: null,
+  isAdmin: false,
+  adminPage: 'questions',
+  editingQuestion: null,
+  selectedQuestionType: 'rules',
+  config: {
+    appName: 'Bonus Driving School',
+    logo: null,
+    primaryColor: '#EF4444',
+    secondaryColor: '#000000',
+    backgroundColor: '#FFFFFF'
+  },
+  questions: {
+    rules: [],
+    signs: [],
+    controls_code1: [],
+    controls_code2: [],
+    controls_code3: []
+  },
+  testHistory: {},
+  statisticsSearchTerm: '',
+  viewingTestDetails: null
+};
+
+// NEW: Helper - Create a simple hash for questions
+function hashString(str) {
+  if (!str) return '0';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// NEW: Validate test won't exceed size limits BEFORE starting
+function validateTestSize(questions) {
+  if (!questions || questions.length === 0) return { valid: false, reason: 'No questions' };
+  
+  // Calculate estimated size
+  const estimatedSize = JSON.stringify({
+    userId: 'sample_user_id',
+    results: questions.map(q => ({
+      question: q.question,
+      options: q.options,
+      correct: q.correct,
+      category: q.category
+    }))
+  }).length;
+  
+  const sizeKB = estimatedSize / 1024;
+  
+  // Safety margin: target 80% of limit (720KB)
+  if (sizeKB > 720) {
+    return {
+      valid: false,
+      reason: `Test estimated at ${sizeKB.toFixed(1)}KB exceeds 720KB limit`,
+      sizeKB: sizeKB,
+      questionCount: questions.length
+    };
+  }
+  
+  return {
+    valid: true,
+    sizeKB: sizeKB,
+    questionCount: questions.length,
+    safetyMargin: `${(100 - (sizeKB / 900 * 100)).toFixed(1)}% remaining`
+  };
+}
+
+// NEW: IMPROVED Optimize test result without losing data
+function optimizeTestResult(testResult) {
+  if (!testResult) return null;
+  
+  // Create a compressed but complete version
+  const optimized = {
+    v: 2, // Version marker
+    u: testResult.userId || '', // userId
+    s: testResult.score || 0, // score
+    t: testResult.total || 0, // total
+    p: testResult.percentage || 0, // percentage
+    d: testResult.date || new Date().toISOString(), // date
+    l: testResult.licenseType || '', // licenseType
+    pa: testResult.passed || false, // passed
+    ts: testResult.timestamp || Date.now(), // timestamp
+    sid: (testResult.userId || '').toLowerCase(), // searchId
+    lc: testResult.licenseCode || testResult.licenseType || '', // licenseCode
+    fid: testResult.firebaseId || `${testResult.userId}_${Date.now()}`, // firebaseId
+    src: 'optimized_v2'
+  };
+  
+  // Compress results with minimal field names
+  if (testResult.results && testResult.results.length > 0) {
+    optimized.r = testResult.results.map(r => ({
+      q: r.question || '', // question (truncate if needed)
+      o: r.options || [], // options
+      ca: r.correctAnswer, // correctAnswer
+      ua: r.userAnswer, // userAnswer
+      c: r.isCorrect || false, // isCorrect
+      cat: r.category || '', // category
+      qid: r.questionId || '', // questionId
+      i: r.imageUrl || null // imageUrl (only URL, not data)
+    }));
+    
+    // Truncate long questions to save space
+    optimized.r.forEach(result => {
+      if (result.q && result.q.length > 500) {
+        result.q = result.q.substring(0, 497) + '...';
+      }
+      if (result.o && Array.isArray(result.o)) {
+        result.o = result.o.map(opt => 
+          opt && opt.length > 200 ? opt.substring(0, 197) + '...' : opt
+        );
+      }
+    });
+  }
+  
+  return optimized;
+}
+
+// NEW: IMPROVED Smart chunking system for large tests
+async function saveTestWithChunking(testResult) {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available');
+    return { success: false, method: 'local_only', fid: `local_${Date.now()}` };
+  }
+  
+  try {
+    const baseId = `${testResult.userId}_${Date.now()}`;
+    const optimizedResult = optimizeTestResult(testResult);
+    
+    // Check size of optimized result
+    const sizeCheck = checkDataSize(optimizedResult);
+    
+    // STRATEGY 1: If under 800KB, save as single document
+    if (!sizeCheck.tooLarge || sizeCheck.size < 800) {
+      await db.collection('testResults').doc(baseId).set(optimizedResult);
+      console.log('✅ Test saved as single document');
+      updateSyncStatus('synced', 'Test saved');
+      return { success: true, method: 'single', sizeKB: sizeCheck.size, fid: baseId };
+    }
+    
+    // STRATEGY 2: If between 800-900KB, use lightweight chunking
+    if (sizeCheck.size < 900) {
+      const mainData = {
+        v: 2,
+        u: testResult.userId,
+        s: testResult.score,
+        t: testResult.total,
+        p: testResult.percentage,
+        d: testResult.date,
+        l: testResult.licenseType,
+        pa: testResult.passed,
+        ts: testResult.timestamp,
+        fid: baseId,
+        src: 'chunked_light',
+        rc: testResult.results ? testResult.results.length : 0 // result count
+      };
+      
+      await db.collection('testResults').doc(baseId).set(mainData);
+      
+      // Save detailed results in chunks if needed
+      if (testResult.results && testResult.results.length > 0) {
+        const chunkSize = Math.ceil(testResult.results.length / 3); // Split into max 3 chunks
+        for (let i = 0; i < testResult.results.length; i += chunkSize) {
+          const chunk = testResult.results.slice(i, i + chunkSize);
+          const chunkId = `${baseId}_chunk${Math.floor(i/chunkSize)}`;
+          
+          // Compress chunk data
+          const compressedChunk = chunk.map(r => ({
+            q: r.question ? r.question.substring(0, 300) : '',
+            o: r.options ? r.options.map(opt => opt.substring(0, 100)) : [],
+            ca: r.correctAnswer,
+            ua: r.userAnswer,
+            c: r.isCorrect,
+            cat: r.category
+          }));
+          
+          await db.collection('testResults').doc(baseId)
+            .collection('chunks').doc(chunkId).set({
+              index: Math.floor(i/chunkSize),
+              data: compressedChunk
+            });
+        }
+      }
+      
+      console.log('✅ Test saved with light chunking');
+      updateSyncStatus('synced', 'Test saved (chunked)');
+      return { success: true, method: 'chunked_light', sizeKB: sizeCheck.size, fid: baseId };
+    }
+    
+    // STRATEGY 3: If too large, save only summary
+    console.warn('Test too large, saving summary only');
+    const summaryData = {
+      v: 2,
+      u: testResult.userId,
+      s: testResult.score,
+      t: testResult.total,
+      p: testResult.percentage,
+      d: testResult.date,
+      l: testResult.licenseType,
+      pa: testResult.passed,
+      ts: testResult.timestamp,
+      fid: baseId,
+      src: 'summary_only',
+      rc: testResult.results ? testResult.results.length : 0,
+      note: 'Detailed results not saved due to size limits'
+    };
+    
+    await db.collection('testResults').doc(baseId).set(summaryData);
+    updateSyncStatus('synced', 'Test saved (summary only)');
+    return { success: true, method: 'summary', sizeKB: sizeCheck.size, fid: baseId };
+    
+  } catch (error) {
+    console.error('Error saving test:', error);
+    updateSyncStatus('error', 'Save failed');
+    return { success: false, method: 'error', error: error.message, fid: `error_${Date.now()}` };
+  }
+}
+
+// NEW: Check if data will exceed Firestore limits
+function checkDataSize(data) {
+  try {
+    const jsonString = JSON.stringify(data);
+    const sizeInBytes = new TextEncoder().encode(jsonString).length;
+    const sizeInKB = sizeInBytes / 1024;
+    const sizeInMB = sizeInKB / 1024;
+    
+    console.log(`Data size: ${sizeInKB.toFixed(2)}KB (${sizeInMB.toFixed(3)}MB)`);
+    
+    if (sizeInBytes > 950000) { // 950KB safety margin
+      console.warn(`⚠️ Data too large: ${sizeInKB.toFixed(2)}KB`);
+      return {
+        tooLarge: true,
+        size: sizeInKB,
+        sizeMB: sizeInMB,
+        estimatedPercent: ((sizeInBytes / 1048576) * 100).toFixed(1)
+      };
+    }
+    
+    return {
+      tooLarge: false,
+      size: sizeInKB,
+      sizeMB: sizeInMB,
+      estimatedPercent: ((sizeInBytes / 1048576) * 100).toFixed(1)
+    };
+  } catch (error) {
+    console.error('Error checking data size:', error);
+    return { tooLarge: true, error: error.message };
+  }
+}
+
+// NEW: Clean up old test results that might be too large
+async function cleanupLargeDocuments() {
+  if (!firebaseInitialized || !db) return;
+  
+  try {
+    // Get all test results and check sizes
+    const snapshot = await db.collection('testResults').get();
+    
+    let deletedCount = 0;
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const size = JSON.stringify(data).length;
+      
+      if (size > 900000) { // 900KB threshold
+        console.log(`Deleting large document: ${doc.id} (${(size/1024).toFixed(2)}KB)`);
+        await doc.ref.delete();
+        deletedCount++;
+      }
+    }
+    
+    console.log(`Deleted ${deletedCount} large documents`);
+    return deletedCount;
+    
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    return 0;
+  }
+}
+
+// NEW: Validate question data before adding to test
+function validateQuestionForTest(question) {
+  const validated = { ...question };
+  
+  // Truncate long question text
+  if (validated.question && validated.question.length > 500) {
+    validated.question = validated.question.substring(0, 497) + '...';
+  }
+  
+  // Truncate long options
+  validated.options = validated.options.map(opt => 
+    opt && opt.length > 200 ? opt.substring(0, 197) + '...' : opt
+  );
+  
+  // Remove image data if present (saves significant space)
+  delete validated.image;
+  delete validated.imageData;
+  delete validated.imagePreview;
+  
+  // Only keep essential fields
+  return {
+    id: validated.id,
+    question: validated.question,
+    options: validated.options,
+    correct: validated.correct,
+    category: validated.category,
+    imageUrl: validated.imageUrl ? 'yes' : null // Just indicate if image exists
+  };
+}
+
+// NEW: Normalize test data to ensure consistent structure
+function normalizeTestData(test) {
+  if (!test) return null;
+  
+  return {
+    userId: test.userId || '',
+    score: test.score || 0,
+    total: test.total || 0,
+    percentage: test.percentage || 0,
+    results: Array.isArray(test.results) ? test.results.map(result => ({
+      question: result.question || '',
+      userAnswer: result.userAnswer !== undefined ? result.userAnswer : -1,
+      correctAnswer: result.correctAnswer !== undefined ? result.correctAnswer : -1,
+      isCorrect: result.isCorrect || false,
+      options: Array.isArray(result.options) ? result.options : [],
+      category: result.category || '',
+      questionId: result.questionId || '',
+      imageUrl: result.imageUrl || null
+    })) : [],
+    date: test.date || new Date().toISOString(),
+    licenseType: test.licenseType || '',
+    passed: test.passed || false,
+    timestamp: test.timestamp || Date.now(),
+    searchId: (test.userId || '').toLowerCase(),
+    licenseCode: test.licenseCode || test.licenseType || '',
+    firebaseId: test.firebaseId || `${test.userId}_${Date.now()}`
+  };
+}
+
+// NEW: Render size warning
+function renderSizeWarning() {
+  if (!state.currentTest) return '';
+  
+  const estimatedSize = JSON.stringify(state.currentTest).length;
+  const sizeKB = estimatedSize / 1024;
+  
+  if (sizeKB > 500) {
+    return `
+      <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+        <p class="text-yellow-800 text-sm">
+          ⚠️ <strong>Large Test Warning:</strong> This test contains ${state.currentTest.length} questions 
+          (${sizeKB.toFixed(1)}KB). Some features may be limited.
+        </p>
+      </div>
+    `;
+  }
+  
+  return '';
+}
+
+// NEW: STRONGER Deduplication function - Updated to check Firebase ID more strictly
+function addTestToHistory(testResult) {
+  const userId = testResult.userId;
+  
+  if (!userId) {
+    console.error('Cannot add test to history: missing userId');
+    return false;
+  }
+  
+  if (!state.testHistory[userId]) {
+    state.testHistory[userId] = [];
+  }
+  
+  // Generate a consistent firebaseId if not present
+  if (!testResult.firebaseId) {
+    testResult.firebaseId = `${userId}_${testResult.timestamp || Date.now()}`;
+  }
+  
+  // STRONG check for duplicates - multiple criteria
+  const isDuplicate = state.testHistory[userId].some(existingTest => {
+    // Check by firebaseId (most reliable)
+    if (testResult.firebaseId && existingTest.firebaseId === testResult.firebaseId) {
+      console.log('Duplicate found by firebaseId:', testResult.firebaseId);
+      return true;
+    }
+    
+    // Check by exact timestamp match
+    if (testResult.timestamp && existingTest.timestamp && 
+        Math.abs(existingTest.timestamp - testResult.timestamp) < 100) {
+      console.log('Duplicate found by timestamp (within 100ms)');
+      return true;
+    }
+    
+    // Check by date, score, and user ID
+    if (testResult.date && existingTest.date && 
+        testResult.score === existingTest.score &&
+        testResult.total === existingTest.total &&
+        testResult.userId === existingTest.userId) {
+      const dateA = new Date(testResult.date).getTime();
+      const dateB = new Date(existingTest.date).getTime();
+      if (Math.abs(dateA - dateB) < 60000) { // Within 1 minute
+        console.log('Duplicate found by date/score match (within 1 minute)');
+        return true;
+      }
+    }
+    
+    return false;
+  });
+  
+  if (!isDuplicate) {
+    // Ensure the test has a unique ID for display
+    testResult.displayId = testResult.firebaseId || `${userId}_${Date.now()}`;
+    
+    state.testHistory[userId].push(testResult);
+    
+    // Sort by date (newest first)
+    state.testHistory[userId].sort((a, b) => {
+      const dateA = new Date(a.date || a.timestamp || 0);
+      const dateB = new Date(b.date || b.timestamp || 0);
+      return dateB - dateA;
+    });
+    
+    localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+    console.log('✅ Test added to history (deduplication check passed)');
+    console.log('Test details:', {
+      firebaseId: testResult.firebaseId,
+      timestamp: testResult.timestamp,
+      date: testResult.date,
+      score: testResult.score
+    });
+    return true;
+  }
+  
+  console.log('⚠️ Duplicate test detected, not adding to history');
+  console.log('Duplicate details:', {
+    firebaseId: testResult.firebaseId,
+    timestamp: testResult.timestamp,
+    date: testResult.date,
+    score: testResult.score
+  });
+  return false;
+}
+
+// NEW: Clean duplicate tests from history
+function cleanDuplicateTestsInHistory() {
+  console.log('Cleaning duplicate tests from history...');
+  
+  let totalDuplicatesRemoved = 0;
+  
+  for (const userId in state.testHistory) {
+    const tests = state.testHistory[userId];
+    const uniqueTests = [];
+    const seenFirebaseIds = new Set();
+    const seenTimestamps = new Set();
+    
+    for (const test of tests) {
+      let isDuplicate = false;
+      
+      // Check by firebaseId
+      if (test.firebaseId && seenFirebaseIds.has(test.firebaseId)) {
+        console.log(`Removing duplicate by firebaseId: ${test.firebaseId}`);
+        isDuplicate = true;
+      }
+      
+      // Check by timestamp (within 1 second)
+      if (test.timestamp) {
+        // Round timestamp to nearest second for comparison
+        const roundedTimestamp = Math.floor(test.timestamp / 1000) * 1000;
+        if (seenTimestamps.has(roundedTimestamp)) {
+          console.log(`Removing duplicate by timestamp: ${test.timestamp}`);
+          isDuplicate = true;
+        }
+      }
+      
+      if (!isDuplicate) {
+        uniqueTests.push(test);
+        if (test.firebaseId) seenFirebaseIds.add(test.firebaseId);
+        if (test.timestamp) {
+          const roundedTimestamp = Math.floor(test.timestamp / 1000) * 1000;
+          seenTimestamps.add(roundedTimestamp);
+        }
+      } else {
+        totalDuplicatesRemoved++;
+      }
+    }
+    
+    state.testHistory[userId] = uniqueTests;
+  }
+  
+  if (totalDuplicatesRemoved > 0) {
+    localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+    console.log(`✅ Removed ${totalDuplicatesRemoved} duplicate tests from history`);
+    alert(`Cleaned ${totalDuplicatesRemoved} duplicate tests from history`);
+  }
+  
+  return totalDuplicatesRemoved;
+}
+
+// NEW: Load chunked test data
+async function loadChunkedTestData(testId) {
+  if (!firebaseInitialized || !db) return null;
+  
+  try {
+    // Get main document
+    const mainDoc = await db.collection('testResults').doc(testId).get();
+    if (!mainDoc.exists) return null;
+    
+    const mainData = mainDoc.data();
+    
+    // Check if it's chunked
+    if (mainData.src === 'chunked_light' && mainData.rc > 0) {
+      // Load all chunks
+      const chunksSnapshot = await db.collection('testResults')
+        .doc(testId)
+        .collection('chunks')
+        .get();
+      
+      if (!chunksSnapshot.empty) {
+        // Combine all chunks
+        let allResults = [];
+        chunksSnapshot.forEach(chunkDoc => {
+          const chunkData = chunkDoc.data();
+          if (chunkData.data && Array.isArray(chunkData.data)) {
+            // Decompress chunk data
+            const decompressed = chunkData.data.map(r => ({
+              question: r.q || '',
+              options: r.o || [],
+              correctAnswer: r.ca,
+              userAnswer: r.ua,
+              isCorrect: r.c,
+              category: r.cat || ''
+            }));
+            allResults = [...allResults, ...decompressed];
+          }
+        });
+        
+        // Sort by original order (if index is available)
+        allResults.sort((a, b) => {
+          if (a.index !== undefined && b.index !== undefined) {
+            return a.index - b.index;
+          }
+          return 0;
+        });
+        
+        mainData.results = allResults;
+      }
+    }
+    
+    return mainData;
+  } catch (error) {
+    console.error('Error loading chunked data:', error);
+    return null;
+  }
+}
+
+// NEW: Check question size before saving
+function checkQuestionSize(question) {
+  const estimatedSize = JSON.stringify(question).length;
+  const sizeKB = estimatedSize / 1024;
+  
+  if (sizeKB > 50) { // Each question should be under 50KB
+    return {
+      warning: true,
+      sizeKB: sizeKB,
+      message: `Question is ${sizeKB.toFixed(1)}KB (recommend under 50KB)`
+    };
+  }
+  
+  return { warning: false, sizeKB: sizeKB };
+}
+
+// Search functions
+function searchStudentTests() {
+  const searchTerm = searchState.searchTerm.trim().toLowerCase();
+  
+  if (!searchTerm) {
+    searchState.searchResults = [];
+    render();
+    return;
+  }
+  
+  searchState.isSearching = true;
+  
+  // Search in local test history
+  const allEntries = Object.entries(state.testHistory);
+  searchState.searchResults = allEntries.filter(([studentId, tests]) => 
+    studentId.toLowerCase().includes(searchTerm)
+  );
+  
+  searchState.isSearching = false;
+  render();
+}
+
+function clearSearch() {
+  searchState.searchTerm = '';
+  searchState.searchResults = [];
+  searchState.selectedStudent = null;
+  searchState.selectedTest = null;
+  render();
+}
+
+function selectStudentForAnalysis(studentId) {
+  console.log('selectStudentForAnalysis called with:', studentId);
+  searchState.selectedStudent = studentId;
+  searchState.selectedTest = null;
+  
+  // Force re-render
+  setTimeout(() => {
+    render();
+  }, 100);
+}
+
+// FIXED: Select test for analysis
+function selectTestForAnalysis(testIndex) {
+  console.log('selectTestForAnalysis called with index:', testIndex);
+  console.log('Selected student:', searchState.selectedStudent);
+  console.log('Available tests:', state.testHistory[searchState.selectedStudent]);
+  
+  if (!searchState.selectedStudent || !state.testHistory[searchState.selectedStudent]) {
+    console.error('No student selected or no tests found');
+    alert('No test data available. Please select a student first.');
+    return;
+  }
+  
+  const tests = state.testHistory[searchState.selectedStudent];
+  
+  // Validate the index
+  if (testIndex < 0 || testIndex >= tests.length) {
+    console.error('Invalid test index:', testIndex, 'Available tests:', tests.length);
+    alert('Invalid test selection. Please try again.');
+    return;
+  }
+  
+  searchState.selectedTest = tests[testIndex];
+  console.log('Selected test:', searchState.selectedTest);
+  
+  // Force re-render
+  setTimeout(() => {
+    render();
+  }, 100);
+}
+
+// FIXED: Close analysis modal
+function closeAnalysis() {
+  console.log('Closing analysis...');
+  searchState.selectedTest = null;
+  
+  // Force re-render
+  setTimeout(() => {
+    render();
+  }, 100);
+}
+
+// FIXED: Go back to search view
+function goBackToSearch() {
+  console.log('Going back to search...');
+  searchState.selectedStudent = null;
+  searchState.selectedTest = null;
+  
+  // Force re-render
+  setTimeout(() => {
+    render();
+  }, 100);
+}
+
+// UPDATED: Save test result - ONLY to testResults collection, NOT to consolidated history
+async function saveTestResultToFirebase(testResult) {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available, saving locally only');
+    updateSyncStatus('offline', 'Local only');
+    
+    // Still try to add to local history with deduplication
+    addTestToHistory(testResult);
+    return false;
+  }
+  
+  updateSyncStatus('syncing', 'Saving test result...');
+  
+  try {
+    console.log('Starting to save test result to Firebase...');
+    
+    // Normalize the test result first
+    const normalizedResult = normalizeTestData(testResult);
+    
+    // Use the new chunking system
+    const saveResult = await saveTestWithChunking(normalizedResult);
+    
+    if (saveResult.success) {
+      console.log('✅ Test result saved successfully to Firebase');
+      
+      // Show size info
+      console.log(`📊 Saved ${saveResult.sizeKB.toFixed(2)}KB`);
+      
+      // Ensure the test has the firebaseId
+      normalizedResult.firebaseId = saveResult.fid;
+      normalizedResult.saveMethod = saveResult.method;
+      
+      // Add to local history with deduplication
+      addTestToHistory(normalizedResult);
+      
+      return true;
+    } else {
+      updateSyncStatus('error', 'Save failed');
+      
+      // Fallback to local save
+      normalizedResult.firebaseId = `local_fallback_${Date.now()}`;
+      normalizedResult.saveMethod = 'local_fallback';
+      addTestToHistory(normalizedResult);
+      
+      return false;
+    }
+    
+  } catch (error) {
+    console.error('❌ Error saving test result:', error);
+    
+    // Check if it's a size-related error
+    if (error.code === 'resource-exhausted' || 
+        error.message.includes('too large') ||
+        error.message.includes('exceeds') ||
+        error.code === 400) {
+      
+      console.error('Size limit exceeded!');
+      alert(`Test result too large for Firestore (max 1MB).\n\nTry:\n1. Taking shorter tests\n2. Removing question images\n3. Contacting support`);
+      
+      // Save locally with warning
+      const warningResult = {
+        ...testResult,
+        firebaseError: 'Size limit exceeded',
+        savedLocallyOnly: true,
+        localSaveTime: new Date().toISOString(),
+        firebaseId: `local_${Date.now()}`
+      };
+      
+      // Add to local history with deduplication
+      addTestToHistory(warningResult);
+      
+      updateSyncStatus('error', 'Too large - saved locally');
+      
+    } else {
+      updateSyncStatus('error', `Save failed: ${error.code || error.message}`);
+      
+      // Fallback to local save
+      const localResult = {
+        ...testResult,
+        firebaseId: `local_fallback_${Date.now()}`
+      };
+      addTestToHistory(localResult);
+    }
+    
+    return false;
+  }
+}
+
+// UPDATED: Finish test with size validation and chunking system
+async function finishTest() {
+  const results = state.currentTest.map((q, i) => ({
+    question: q.question || '',
+    userAnswer: state.answers[i] !== undefined && state.answers[i] !== null ? state.answers[i] : -1,
+    correctAnswer: q.correct !== undefined && q.correct !== null ? q.correct : -1,
+    isCorrect: state.answers[i] === q.correct,
+    options: q.options || [],
+    category: q.category || '',
+    questionId: q.id || '',
+    imageUrl: q.imageUrl || null,
+    image: q.image || null,
+    imageSize: q.imageSize || 200
+  }));
+  
+  const score = results.filter(r => r.isCorrect).length;
+  const percentage = Math.round((score / results.length) * 100);
+  
+  const testResult = normalizeTestData({
+    userId: state.idNumber || '',
+    score: score,
+    total: results.length,
+    percentage: percentage,
+    results: results,
+    date: new Date().toISOString(),
+    licenseType: state.selectedLicense || '',
+    passed: percentage >= 70,
+    timestamp: Date.now(),
+    searchId: (state.idNumber || '').toLowerCase(),
+    licenseCode: state.selectedLicense || '',
+    source: 'student_test_v3'
+  });
+  
+  state.testResults = testResult;
+  
+  // Save to Firebase (which will handle deduplication)
+  try {
+    await saveTestResultToFirebase(testResult);
+    console.log('Test result saved successfully');
+  } catch (error) {
+    console.error('Failed to save test result:', error);
+    // Fallback: add to local history with deduplication
+    testResult.firebaseId = `local_${Date.now()}`;
+    addTestToHistory(testResult);
+  }
+  
+  state.page = 'results';
+  render();
+}
+
+// ============================================
+// UPDATED FIREBASE-FIRST ARCHITECTURE
+// ============================================
+
+// NEW: Create unique signature for question deduplication
+function createQuestionSignature(question) {
+  // Remove image data for signature (since it can vary)
+  const { image, imageData, imagePreview, ...cleanQuestion } = question;
+  
+  // Create a consistent string representation
+  return JSON.stringify({
+    q: cleanQuestion.question?.trim().toLowerCase(),
+    o: cleanQuestion.options?.map(opt => opt?.trim().toLowerCase()).sort(),
+    c: cleanQuestion.correct,
+    cat: cleanQuestion.category
+  });
+}
+
+// NEW: Auto-detect and clean duplicate questions
+async function autoCleanDuplicateQuestions() {
+  console.log('🔄 Auto-checking for duplicate questions...');
+  
+  let totalRemoved = 0;
+  let hasChanges = false;
+  
+  for (const category in state.questions) {
+    if (!state.questions[category] || !Array.isArray(state.questions[category])) {
+      continue;
+    }
+    
+    const questions = state.questions[category];
+    const uniqueQuestions = [];
+    const seenSignatures = new Set();
+    
+    for (const question of questions) {
+      // Create a unique signature for the question
+      const signature = createQuestionSignature(question);
+      
+      if (seenSignatures.has(signature)) {
+        console.log(`Found duplicate: ${question.question.substring(0, 50)}...`);
+        totalRemoved++;
+        hasChanges = true;
+      } else {
+        seenSignatures.add(signature);
+        uniqueQuestions.push(question);
+      }
+    }
+    
+    // Check for ID collisions
+    const idMap = new Map();
+    const dedupedQuestions = [];
+    
+    for (const question of uniqueQuestions) {
+      if (idMap.has(question.id)) {
+        console.log(`Found ID collision: ${question.id}`);
+        // Generate new ID
+        question.id = `${question.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        hasChanges = true;
+      }
+      idMap.set(question.id, true);
+      dedupedQuestions.push(question);
+    }
+    
+    state.questions[category] = dedupedQuestions;
+  }
+  
+  // Save changes to Firebase if any duplicates were found
+  if (hasChanges) {
+    console.log(`🔄 Saving cleaned questions to Firebase (removed ${totalRemoved} duplicates)`);
+    await saveQuestionsToFirebase();
+  }
+  
+  return totalRemoved;
+}
+
+// NEW: Optimize questions for Firebase storage
+function optimizeQuestionsForFirebase(questions) {
+  const optimized = {};
+  
+  for (const category in questions) {
+    if (!questions[category] || !Array.isArray(questions[category])) {
+      optimized[category] = [];
+      continue;
+    }
+    
+    optimized[category] = questions[category].map(question => {
+      // Remove image data (store only URL)
+      const { image, imageData, imagePreview, ...cleanQuestion } = question;
+      
+      // Truncate long text
+      if (cleanQuestion.question && cleanQuestion.question.length > 500) {
+        cleanQuestion.question = cleanQuestion.question.substring(0, 497) + '...';
+      }
+      
+      // Truncate options
+      if (cleanQuestion.options && Array.isArray(cleanQuestion.options)) {
+        cleanQuestion.options = cleanQuestion.options.map(opt => 
+          opt && opt.length > 200 ? opt.substring(0, 197) + '...' : opt
+        );
+      }
+      
+      // Ensure ID exists
+      if (!cleanQuestion.id) {
+        cleanQuestion.id = `${category}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+      
+      return cleanQuestion;
+    });
+  }
+  
+  return optimized;
+}
+
+// UPDATED: Save questions to Firebase with auto-cleanup
+async function saveQuestionsToFirebase() {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available');
+    updateSyncStatus('offline', 'Cannot save');
+    return false;
+  }
+  
+  updateSyncStatus('syncing', 'Saving to cloud...');
+  
+  try {
+    // Auto-clean before saving
+    await autoCleanDuplicateQuestions();
+    
+    // Optimize questions (remove image data, truncate long text)
+    const optimizedQuestions = optimizeQuestionsForFirebase(state.questions);
+    
+    // Check size
+    const sizeCheck = checkDataSize(optimizedQuestions);
+    
+    console.log(`📊 Questions size: ${sizeCheck.sizeKB.toFixed(2)}KB`);
+    
+    if (sizeCheck.tooLarge) {
+      console.warn('Questions too large, saving by category');
+      
+      // Save each category separately
+      const savePromises = [];
+      
+      for (const category in optimizedQuestions) {
+        if (optimizedQuestions[category].length > 0) {
+          savePromises.push(
+            db.collection('questions').doc(category).set({
+              questions: optimizedQuestions[category],
+              count: optimizedQuestions[category].length,
+              lastUpdated: new Date().toISOString()
+            }, { merge: true })
+          );
+        }
+      }
+      
+      await Promise.all(savePromises);
+      
+      // Also save a metadata document
+      await db.collection('questions').doc('_metadata').set({
+        lastUpdated: new Date().toISOString(),
+        totalQuestions: Object.values(optimizedQuestions).reduce((sum, qs) => sum + qs.length, 0),
+        savedByCategory: true
+      });
+      
+    } else {
+      // Save as single document with metadata
+      await db.collection('data').doc('questions').set({
+        ...optimizedQuestions,
+        _metadata: {
+          lastUpdated: new Date().toISOString(),
+          totalQuestions: Object.values(optimizedQuestions).reduce((sum, qs) => sum + qs.length, 0),
+          version: '2.0',
+          autoCleaned: true
+        }
+      }, { merge: false }); // CRITICAL: Replace entirely, don't merge
+    }
+    
+    // Update cache
+    localStorage.setItem('drivingSchoolQuestions', JSON.stringify({
+      questions: state.questions,
+      _cache: {
+        timestamp: Date.now(),
+        source: 'firebase',
+        questionCount: Object.values(state.questions).reduce((sum, qs) => sum + qs.length, 0)
+      }
+    }));
+    
+    updateSyncStatus('synced', 'Questions saved');
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error saving questions:', error);
+    
+    if (error.code === 400 || error.message.includes('invalid argument')) {
+      console.error('Invalid argument error - likely data too large or malformed');
+      
+      // Emergency cleanup and retry
+      await emergencyCleanupAndSave();
+    } else {
+      updateSyncStatus('error', 'Save failed');
+    }
+    
+    return false;
+  }
+}
+
+// UPDATED: Load from Firebase - COMPLETELY REPLACE local data
+async function loadFromFirebase() {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available');
+    updateSyncStatus('offline', 'No connection');
+    return false;
+  }
+  
+  updateSyncStatus('syncing', 'Loading from cloud...');
+  
+  try {
+    let totalQuestions = 0;
+    let hasData = false;
+    
+    // STRATEGY 1: Try to load from consolidated document first
+    const questionsDoc = await db.collection('data').doc('questions').get();
+    if (questionsDoc.exists) {
+      const firebaseQuestions = questionsDoc.data();
+      
+      // Remove metadata fields to get just the questions
+      const { _metadata, ...questionsData } = firebaseQuestions;
+      
+      // COMPLETELY REPLACE local questions with Firebase data
+      state.questions = questionsData;
+      
+      // Count questions
+      for (const category in questionsData) {
+        totalQuestions += questionsData[category]?.length || 0;
+      }
+      
+      console.log(`✅ Loaded ${totalQuestions} questions from consolidated document`);
+      hasData = true;
+    } else {
+      // STRATEGY 2: Load from separate category documents
+      const categories = ['rules', 'signs', 'controls_code1', 'controls_code2', 'controls_code3'];
+      let loadedCategories = 0;
+      
+      for (const category of categories) {
+        const categoryDoc = await db.collection('questions').doc(category).get();
+        if (categoryDoc.exists) {
+          const categoryData = categoryDoc.data();
+          
+          // Handle chunked data
+          if (categoryData.chunked) {
+            // Load all chunks
+            const chunksSnapshot = await db.collection('questions')
+              .doc(category)
+              .collection('chunks')
+              .get();
+            
+            let allQuestions = [];
+            chunksSnapshot.forEach(chunkDoc => {
+              const chunkData = chunkDoc.data();
+              if (chunkData.questions && Array.isArray(chunkData.questions)) {
+                allQuestions = [...allQuestions, ...chunkData.questions];
+              }
+            });
+            
+            state.questions[category] = allQuestions;
+            totalQuestions += allQuestions.length;
+          } else {
+            // Direct questions
+            state.questions[category] = categoryData.questions || [];
+            totalQuestions += (categoryData.questions || []).length;
+          }
+          
+          loadedCategories++;
+        }
+      }
+      
+      if (loadedCategories > 0) {
+        console.log(`✅ Loaded ${totalQuestions} questions from ${loadedCategories} categories`);
+        hasData = true;
+      }
+    }
+    
+    // STRATEGY 3: If no data in Firebase, generate samples
+    if (!hasData || totalQuestions === 0) {
+      console.log('No questions in Firebase, generating samples');
+      state.questions = generateSampleQuestions();
+      totalQuestions = Object.values(state.questions).reduce((sum, qs) => sum + qs.length, 0);
+      
+      // Save samples to Firebase
+      await saveQuestionsToFirebase();
+    }
+    
+    // Auto-detect and clean duplicates
+    const duplicatesRemoved = await autoCleanDuplicateQuestions();
+    if (duplicatesRemoved > 0) {
+      console.log(`✅ Auto-cleaned ${duplicatesRemoved} duplicate questions`);
+    }
+    
+    // Save to localStorage ONLY as cache (with timestamp)
+    localStorage.setItem('drivingSchoolQuestions', JSON.stringify({
+      questions: state.questions,
+      _cache: {
+        timestamp: Date.now(),
+        source: 'firebase',
+        questionCount: totalQuestions
+      }
+    }));
+    
+    updateSyncStatus('synced', `Loaded ${totalQuestions} questions`);
+    
+    // Force re-render if in admin/questions page
+    if (state.page === 'admin' && state.adminPage === 'questions') {
+      render();
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error loading from Firebase:', error);
+    updateSyncStatus('error', 'Load failed');
+    
+    // Fallback to cached data if available
+    const cached = localStorage.getItem('drivingSchoolQuestions');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.questions) {
+          state.questions = parsed.questions;
+          console.log('📦 Using cached questions as fallback');
+        }
+      } catch (e) {
+        console.error('Failed to parse cache:', e);
+      }
+    }
+    
+    return false;
+  }
+}
+
+// NEW: Emergency cleanup for invalid data
+async function emergencyCleanupAndSave() {
+  console.log('🆘 Emergency cleanup triggered');
+  
+  try {
+    // Clear all questions
+    state.questions = {
+      rules: [],
+      signs: [],
+      controls_code1: [],
+      controls_code2: [],
+      controls_code3: []
+    };
+    
+    // Remove from localStorage
+    localStorage.removeItem('drivingSchoolQuestions');
+    
+    // Clear Firebase
+    const batch = db.batch();
+    
+    // Delete questions collection
+    const questionsSnapshot = await db.collection('questions').get();
+    questionsSnapshot.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    
+    // Delete data/questions document
+    const dataRef = db.collection('data').doc('questions');
+    batch.delete(dataRef);
+    
+    await batch.commit();
+    
+    console.log('✅ Emergency cleanup complete');
+    
+    // Generate fresh sample questions
+    state.questions = generateSampleQuestions();
+    
+    // Save fresh data
+    await saveQuestionsToFirebase();
+    
+    alert('⚠️ Database was corrupted. All questions have been reset to fresh samples.');
+    
+  } catch (error) {
+    console.error('Emergency cleanup failed:', error);
+    alert('❌ Emergency cleanup failed. Please contact support.');
+  }
+}
+
+// NEW: Check for data accumulation on app load
+function checkForDataAccumulation() {
+  console.log('🔍 Checking for data accumulation...');
+  
+  let accumulationDetected = false;
+  let issues = [];
+  
+  // Check question counts
+  for (const category in state.questions) {
+    const count = state.questions[category]?.length || 0;
+    
+    // Reasonable limits per category
+    const limits = {
+      rules: 500,
+      signs: 500,
+      controls_code1: 200,
+      controls_code2: 200,
+      controls_code3: 200
+    };
+    
+    if (count > (limits[category] || 300)) {
+      accumulationDetected = true;
+      issues.push(`${category}: ${count} questions (limit: ${limits[category] || 300})`);
+    }
+  }
+  
+  // Check for duplicate IDs
+  const allQuestions = Object.values(state.questions).flat();
+  const idMap = new Map();
+  let duplicateIds = 0;
+  
+  for (const question of allQuestions) {
+    if (question.id) {
+      if (idMap.has(question.id)) {
+        duplicateIds++;
+      }
+      idMap.set(question.id, true);
+    }
+  }
+  
+  if (duplicateIds > 0) {
+    accumulationDetected = true;
+    issues.push(`Duplicate IDs: ${duplicateIds} found`);
+  }
+  
+  if (accumulationDetected) {
+    console.warn('⚠️ Data accumulation detected:', issues);
+    
+    // Auto-fix by reloading from Firebase
+    setTimeout(async () => {
+      console.log('🔄 Auto-fixing accumulation by reloading from Firebase...');
+      await loadFromFirebase();
+    }, 1000);
+    
+    return true;
+  }
+  
+  console.log('✅ No data accumulation detected');
+  return false;
+}
+
+// UPDATED: Save to Firebase (config only)
+async function saveToFirebase() {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available, saving locally only');
+    updateSyncStatus('offline', 'Local only');
+    return false;
+  }
+  
+  updateSyncStatus('syncing');
+  
+  try {
+    // Save config to Firebase
+    await db.collection('config').doc('appConfig').set(state.config, { merge: true });
+    console.log('✅ Config saved to Firebase');
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    updateSyncStatus('synced', `at ${timeStr}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error saving to Firebase:', error);
+    updateSyncStatus('error', `Save failed: ${error.code || error.message}`);
+    return false;
+  }
+}
+
+// UPDATED: Load test results from Firebase - SINGLE SOURCE ONLY
+async function loadTestResultsFromFirebase() {
+  if (!firebaseInitialized || !db) {
+    console.log('Firebase not available');
+    updateSyncStatus('error', 'Firebase not connected');
+    return false;
+  }
+  
+  try {
+    console.log('Loading test results from Firebase (single source only)...');
+    updateSyncStatus('syncing', 'Loading test results...');
+    
+    let loadedCount = 0;
+    let duplicateCount = 0;
+    
+    // Load ONLY from testResults collection (single source)
+    try {
+      const testResultsSnapshot = await db.collection('testResults').get();
+      if (!testResultsSnapshot.empty) {
+        console.log(`Found ${testResultsSnapshot.size} test results in Firebase`);
+        
+        testResultsSnapshot.forEach(doc => {
+          const testResult = doc.data();
+          const userId = testResult.u || testResult.userId; // Use compressed or full field name
+          
+          if (!userId) {
+            console.warn('Test result missing userId:', doc.id);
+            return;
+          }
+          
+          if (!state.testHistory[userId]) {
+            state.testHistory[userId] = [];
+          }
+          
+          // Ensure the test has a firebaseId
+          const firebaseId = testResult.fid || doc.id;
+          
+          // Check if this test already exists
+          const existingTest = state.testHistory[userId].find(t => 
+            t.firebaseId === firebaseId ||
+            (t.timestamp && testResult.ts && Math.abs(t.timestamp - testResult.ts) < 1000) ||
+            (t.timestamp && testResult.timestamp && Math.abs(t.timestamp - testResult.timestamp) < 1000)
+          );
+          
+          if (!existingTest) {
+            // Check if we need to load chunked data
+            if (testResult.src === 'chunked_light') {
+              // Note: We'll load the chunked data on-demand when viewing
+              const normalizedTest = {
+                userId: userId,
+                score: testResult.s || testResult.score || 0,
+                total: testResult.t || testResult.total || 0,
+                percentage: testResult.p || testResult.percentage || 0,
+                results: [], // Will load from chunks when needed
+                date: testResult.d || testResult.date || new Date().toISOString(),
+                licenseType: testResult.l || testResult.licenseType || '',
+                passed: testResult.pa || testResult.passed || false,
+                timestamp: testResult.ts || testResult.timestamp || Date.now(),
+                searchId: (userId || '').toLowerCase(),
+                licenseCode: testResult.lc || testResult.licenseCode || testResult.licenseType || '',
+                firebaseId: firebaseId,
+                source: testResult.src || 'testResults_collection',
+                hasChunks: true,
+                resultCount: testResult.rc || 0
+              };
+              
+              state.testHistory[userId].push(normalizedTest);
+            } else {
+              // Decompress the data
+              const decompressedResults = testResult.r ? testResult.r.map(r => ({
+                question: r.q || r.question || '',
+                userAnswer: r.ua !== undefined ? r.ua : (r.userAnswer !== undefined ? r.userAnswer : -1),
+                correctAnswer: r.ca !== undefined ? r.ca : (r.correctAnswer !== undefined ? r.correctAnswer : -1),
+                isCorrect: r.c || r.isCorrect || false,
+                options: r.o || r.options || [],
+                category: r.cat || r.category || '',
+                questionId: r.qid || r.questionId || '',
+                imageUrl: r.i || r.imageUrl || null
+              })) : (testResult.results || []);
+              
+              const normalizedTest = {
+                userId: userId,
+                score: testResult.s || testResult.score || 0,
+                total: testResult.t || testResult.total || 0,
+                percentage: testResult.p || testResult.percentage || 0,
+                results: decompressedResults,
+                date: testResult.d || testResult.date || new Date().toISOString(),
+                licenseType: testResult.l || testResult.licenseType || '',
+                passed: testResult.pa || testResult.passed || false,
+                timestamp: testResult.ts || testResult.timestamp || Date.now(),
+                searchId: (userId || '').toLowerCase(),
+                licenseCode: testResult.lc || testResult.licenseCode || testResult.licenseType || '',
+                firebaseId: firebaseId,
+                source: testResult.src || 'testResults_collection'
+              };
+              
+              state.testHistory[userId].push(normalizedTest);
+            }
+            
+            loadedCount++;
+            
+            console.log(`Loaded test for ${userId}:`, {
+              firebaseId: firebaseId,
+              timestamp: testResult.ts || testResult.timestamp,
+              score: testResult.s || testResult.score
+            });
+          } else {
+            duplicateCount++;
+            console.log(`Skipped duplicate test for ${userId}:`, firebaseId);
+          }
+        });
+        console.log('✅ Test results loaded from Firebase (single source):', testResultsSnapshot.size, 'documents');
+      } else {
+        console.log('No test results found in Firebase');
+      }
+    } catch (error) {
+      console.warn('Could not load test results from Firebase:', error);
+      updateSyncStatus('error', 'Load failed: ' + error.message);
+      return false;
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('drivingSchoolHistory', JSON.stringify(state.testHistory));
+    
+    // Sort tests by date for each student (newest first)
+    Object.keys(state.testHistory).forEach(studentId => {
+      state.testHistory[studentId].sort((a, b) => {
+        const dateA = new Date(a.date || a.timestamp || 0);
+        const dateB = new Date(b.date || b.timestamp || 0);
+        return dateB - dateA; // Newest first
+      });
+    });
+    
+    const totalStudents = Object.keys(state.testHistory).length;
+    const totalTests = Object.values(state.testHistory).reduce((sum, tests) => sum + tests.length, 0);
+    
+    console.log('✅ Test results loaded successfully:', totalStudents, 'students,', totalTests, 'tests');
+    console.log(`📊 Loaded ${loadedCount} new tests, skipped ${duplicateCount} duplicates`);
+    updateSyncStatus('synced', `Loaded ${loadedCount} new tests`);
+    
+    // Show success message
+    if (state.page === 'admin' && state.adminPage === 'statistics') {
+      render();
+      
+      setTimeout(() => {
+        const successMsg = `✅ Loaded ${loadedCount} new test results\n\nSkipped ${duplicateCount} duplicate tests`;
+        alert(successMsg);
+      }, 300);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error loading test results from Firebase:', error);
+    updateSyncStatus('error', 'Load failed');
+    
+    // Show error message
+    alert(`Failed to load test results: ${error.message}`);
+    
+    return false;
+  }
+}
+
+// NEW: Clean Firebase duplicates
+async function cleanFirebaseDuplicates() {
+  if (!firebaseInitialized || !db) {
+    alert('Firebase not connected');
+    return;
+  }
+  
+  try {
+    updateSyncStatus('syncing', 'Cleaning duplicates...');
+    
+    // Get all test results
+    const testResultsSnapshot = await db.collection('testResults').get();
+    const testsByUser = {};
+    const duplicatesToDelete = [];
+    
+    // Group tests by user and find duplicates
+    testResultsSnapshot.forEach(doc => {
+      const test = doc.data();
+      const userId = test.u || test.userId;
+      
+      if (!userId) return;
+      
+      if (!testsByUser[userId]) {
+        testsByUser[userId] = [];
+      }
+      
+      // Check if this is a duplicate
+      const isDuplicate = testsByUser[userId].some(existingTest => {
+        // Check by firebaseId
+        const testId = test.fid || doc.id;
+        const existingId = existingTest.fid || existingTest.docId;
+        if (testId && existingId === testId) {
+          return true;
+        }
+        
+        // Check by timestamp (within 1 second)
+        const testTimestamp = test.ts || test.timestamp;
+        const existingTimestamp = existingTest.ts || existingTest.timestamp;
+        if (testTimestamp && existingTimestamp && 
+            Math.abs(existingTimestamp - testTimestamp) < 1000) {
+          return true;
+        }
+        
+        // Check by date and score
+        const testDate = test.d || test.date;
+        const existingDate = existingTest.d || existingTest.date;
+        const testScore = test.s || test.score;
+        const existingScore = existingTest.s || existingTest.score;
+        const testTotal = test.t || test.total;
+        const existingTotal = existingTest.t || existingTest.total;
+        
+        if (testDate && existingDate && 
+            testScore === existingScore &&
+            testTotal === existingTotal) {
+          const dateA = new Date(testDate).getTime();
+          const dateB = new Date(existingDate).getTime();
+          return Math.abs(dateA - dateB) < 60000; // Within 1 minute
+        }
+        
+        return false;
+      });
+      
+      if (isDuplicate) {
+        duplicatesToDelete.push(doc.id);
+      } else {
+        testsByUser[userId].push({
+          ...test,
+          docId: doc.id
+        });
+      }
+    });
+    
+    // Delete duplicates
+    if (duplicatesToDelete.length > 0) {
+      const batch = db.batch();
+      const batchSize = 500; // Firestore batch limit
+      
+      for (let i = 0; i < duplicatesToDelete.length; i++) {
+        if (i > 0 && i % batchSize === 0) {
+          await batch.commit();
+          batch = db.batch();
+        }
+        batch.delete(db.collection('testResults').doc(duplicatesToDelete[i]));
+      }
+      
+      if (duplicatesToDelete.length % batchSize !== 0) {
+        await batch.commit();
+      }
+      
+      updateSyncStatus('synced', `Cleaned ${duplicatesToDelete.length} duplicates`);
+      alert(`✅ Cleaned ${duplicatesToDelete.length} duplicate tests from Firebase`);
+    } else {
+      updateSyncStatus('synced', 'No duplicates found');
+      alert('No duplicate tests found in Firebase');
+    }
+    
+  } catch (error) {
+    console.error('Error cleaning Firebase duplicates:', error);
+    updateSyncStatus('error', 'Clean failed');
+    alert(`Error cleaning duplicates: ${error.message}`);
+  }
+}
+
+// Helper function to handle loading state for test results button
+async function loadTestResultsWithLoading() {
+  const button = document.getElementById('loadResultsBtn');
+  const icon = document.getElementById('loadResultsIcon');
+  const text = document.getElementById('loadResultsText');
+  
+  if (!button || !icon || !text) {
+    // Fallback if elements not found
+    await loadTestResultsFromFirebase();
+    return;
+  }
+  
+  // Save original state
+  const originalIcon = icon.textContent;
+  const originalText = text.textContent;
+  const originalBg = button.style.backgroundColor;
+  
+  // Set loading state
+  icon.textContent = '⏳';
+  text.textContent = 'Loading...';
+  button.style.backgroundColor = '#6B7280'; // Gray color
+  button.disabled = true;
+  
+  try {
+    // Load the results
+    const success = await loadTestResultsFromFirebase();
+    
+    // Set success state briefly
+    if (success) {
+      icon.textContent = '✅';
+      text.textContent = 'Loaded!';
+      button.style.backgroundColor = '#10B981'; // Green color
+    } else {
+      icon.textContent = '❌';
+      text.textContent = 'Failed';
+      button.style.backgroundColor = '#EF4444'; // Red color
+    }
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+      icon.textContent = originalIcon;
+      text.textContent = originalText;
+      button.style.backgroundColor = originalBg;
+      button.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Error in loadTestResultsWithLoading:', error);
+    
+    // Set error state
+    icon.textContent = '❌';
+    text.textContent = 'Error';
+    button.style.backgroundColor = '#EF4444';
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+      icon.textContent = originalIcon;
+      text.textContent = originalText;
+      button.style.backgroundColor = originalBg;
+      button.disabled = false;
+    }, 2000);
+  }
+}
+
+// Debug function to check Firebase data structure
+async function debugFirebaseData() {
+  if (!firebaseInitialized || !db) {
+    alert('Firebase not initialized');
+    return;
+  }
+  
+  try {
+    updateSyncStatus('syncing', 'Checking data...');
+    
+    // Check testResults collection (where individual tests are saved)
+    const testResultsSnapshot = await db.collection('testResults').get();
+    console.log('testResults collection:', testResultsSnapshot.size, 'documents');
+    
+    // Analyze duplicates
+    const testsByUser = {};
+    const duplicateCount = {};
+    
+    testResultsSnapshot.forEach(doc => {
+      const test = doc.data();
+      const userId = test.u || test.userId;
+      
+      if (!userId) return;
+      
+      if (!testsByUser[userId]) {
+        testsByUser[userId] = [];
+      }
+      
+      testsByUser[userId].push({
+        ...test,
+        docId: doc.id
+      });
+    });
+    
+    // Find duplicates
+    let totalDuplicates = 0;
+    for (const userId in testsByUser) {
+      const tests = testsByUser[userId];
+      const uniqueTests = [];
+      const seen = new Set();
+      
+      for (const test of tests) {
+        const key = `${test.ts || test.timestamp}_${test.s || test.score}_${test.t || test.total}`;
+        if (seen.has(key)) {
+          totalDuplicates++;
+          if (!duplicateCount[userId]) duplicateCount[userId] = 0;
+          duplicateCount[userId]++;
+        } else {
+          seen.add(key);
+          uniqueTests.push(test);
+        }
+      }
+    }
+    
+    // Show detailed summary
+    let summary = `
+Firebase Data Analysis:
+======================
+
+Collections/Documents:
+----------------------
+testResults collection: ${testResultsSnapshot.size} documents
+
+Duplicate Analysis:
+-------------------
+Total duplicates detected: ${totalDuplicates}
+Unique students: ${Object.keys(testsByUser).length}
+
+Students with duplicates:
+-------------------------`;
+    
+    let duplicateStudents = 0;
+    for (const userId in duplicateCount) {
+      if (duplicateCount[userId] > 0) {
+        summary += `\n${userId}: ${duplicateCount[userId]} duplicates`;
+        duplicateStudents++;
+      }
+    }
+    
+    if (duplicateStudents === 0) {
+      summary += '\nNone - all tests appear unique';
+    }
+    
+    summary += `
+
+Current Local Data:
+-------------------
+Students: ${Object.keys(state.testHistory).length}
+Total Tests: ${Object.values(state.testHistory).reduce((sum, tests) => sum + tests.length, 0)}
+
+Local Duplicate Check:
+----------------------`;
+    
+    // Check local duplicates
+    let localDuplicates = 0;
+    for (const userId in state.testHistory) {
+      const tests = state.testHistory[userId];
+      const seen = new Set();
+      
+      for (const test of tests) {
+        const key = `${test.timestamp}_${test.score}_${test.total}`;
+        if (seen.has(key)) {
+          localDuplicates++;
+        } else {
+          seen.add(key);
+        }
+      }
+    }
+    
+    summary += `\nLocal duplicates: ${localDuplicates}`;
+    
+    alert(summary);
+    console.log('Detailed debug info:', {
+      testResultsCount: testResultsSnapshot.size,
+      totalDuplicates: totalDuplicates,
+      localStudents: Object.keys(state.testHistory).length,
+      localTests: Object.values(state.testHistory).reduce((sum, tests) => sum + tests.length, 0),
+      localDuplicates: localDuplicates
+    });
+    
+    updateSyncStatus('synced', 'Data checked');
+    
+  } catch (error) {
+    console.error('Debug error:', error);
+    alert(`Debug error: ${error.message}\n\nCheck Firebase Console to see if collections exist.`);
+    updateSyncStatus('error', 'Debug failed');
+  }
+}
+
+// Test function to create and save a sample test result
+async function testSaveSampleResult() {
+  if (!firebaseInitialized || !db) {
+    alert('Firebase not initialized');
+    return;
+  }
+  
+  try {
+    const sampleTest = {
+      userId: 'TEST_STUDENT_' + Date.now(),
+      score: 85,
+      total: 100,
+      percentage: 85,
+      results: [
+        { question: 'Sample question 1', isCorrect: true, userAnswer: 0, correctAnswer: 0 },
+        { question: 'Sample question 2', isCorrect: false, userAnswer: 1, correctAnswer: 0 }
+      ],
+      date: new Date().toISOString(),
+      licenseType: 'code1',
+      passed: true,
+      timestamp: Date.now(),
+      searchId: 'test_student',
+      licenseCode: 'code1',
+      source: 'test_sample'
+    };
+    
+    updateSyncStatus('syncing', 'Saving test sample...');
+    
+    const testId = `TEST_${Date.now()}`;
+    await db.collection('testResults').doc(testId).set({
+      ...sampleTest,
+      firebaseId: testId,
+      isSample: true,
+      createdForTesting: true
+    });
+    
+    // Also add to local history with deduplication
+    addTestToHistory({
+      ...sampleTest,
+      firebaseId: testId
+    });
+    
+    updateSyncStatus('synced', 'Sample saved');
+    alert(`✅ Sample test saved with ID: ${testId}\n\nCheck Firebase Console to see if it appears.`);
+    
+  } catch (error) {
+    console.error('Test save failed:', error);
+    alert(`❌ Test save failed:\n\n${error.message}\n\nCheck Firebase rules.`);
+    updateSyncStatus('error', 'Test failed');
+  }
+}
+
+// Test Firebase connection
+async function testFirebaseConnection() {
+  updateSyncStatus('syncing', 'Testing...');
+  
+  try {
+    if (!firebaseInitialized) {
+      updateSyncStatus('error', 'Not initialized');
+      return false;
+    }
+    
+    // Try to read a document
+    const testDoc = await db.collection('config').doc('appConfig').get();
+    const isConnected = testDoc.exists || true;
+    
+    updateSyncStatus('synced', 'Connection OK');
+    
+    // Show connection details
+    alert(`Firebase Status: CONNECTED\nProject: ${firebaseConfig.projectId}\nLast Sync: ${lastSyncTime ? lastSyncTime.toLocaleTimeString() : 'Never'}`);
+    
+    return true;
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    updateSyncStatus('error', 'Test failed');
+    alert(`Firebase Connection Test FAILED\nError: ${error.message}`);
+    return false;
+  }
+}
+
+// Generate sample questions
+function generateSampleQuestions() {
+  return {
+    rules: [
+      {
+        id: 'rules_1',
+        question: 'What should you do when approaching a red traffic light?',
+        options: ['Speed up to beat the light', 'Come to a complete stop', 'Slow down but proceed with caution', 'Honk and continue'],
+        correct: 1,
+        category: 'rules'
+      },
+      {
+        id: 'rules_2',
+        question: 'When should you use your headlights?',
+        options: ['Only at night', 'When visibility is less than 150m', 'Only in rain', 'Only on highways'],
+        correct: 1,
+        category: 'rules'
+      }
+    ],
+    signs: [
+      {
+        id: 'signs_1',
+        question: 'What does a triangular red sign mean?',
+        options: ['Stop', 'Yield', 'No Entry', 'Speed Limit'],
+        correct: 1,
+        category: 'signs'
+      }
+    ],
+    controls_code1: [],
+    controls_code2: [],
+    controls_code3: []
+  };
+}
+
+// Navigation functions
+function goHome() {
+  state.page = 'role-selection';
+  state.selectedLicense = null;
+  state.idNumber = '';
+  state.testResults = null;
+  state.isAdmin = false;
+  state.editingQuestion = null;
+  state.viewingTestDetails = null;
+  state.statisticsSearchTerm = '';
+  clearSearch();
+  render();
+}
+
+function selectRole(role) {
+  if (role === 'student') {
+    state.page = 'home';
+  } else if (role === 'staff') {
+    state.page = 'admin-login';
+  }
+  clearSearch();
+  render();
+}
+
+function selectLicense(license) {
+  state.selectedLicense = license;
+  state.page = 'id-input';
+  render();
+}
+
+// Helper function to shuffle an array and select a specific number of items
+function shuffleAndSelect(questions, count) {
+  if (!questions || questions.length === 0) return [];
+  
+  const shuffled = [...questions]; 
+  
+  // Fisher-Yates shuffle
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+// UPDATED: Start test with size validation
+function startTest() {
+  if (!state.idNumber || state.idNumber.trim().length < 5) {
+    alert('Please enter a valid ID number (at least 5 characters)');
+    return;
+  }
+  
+  const rulesQuestions = state.questions.rules;
+  const signsQuestions = state.questions.signs;
+  let controlCategory = '';
+  let controlCount = 0;
+  
+  switch (state.selectedLicense) {
+    case 'code1':
+      controlCategory = 'controls_code1';
+      controlCount = 10;
+      break;
+    case 'code2':
+      controlCategory = 'controls_code2';
+      controlCount = 8;
+      break;
+    case 'code3':
+      controlCategory = 'controls_code3';
+      controlCount = 8;
+      break;
+    default:
+      alert('Invalid license type selected.');
+      return;
+  }
+  
+  const controlQuestions = state.questions[controlCategory];
+  
+  if (rulesQuestions.length < 32 || signsQuestions.length < 32 || controlQuestions.length < controlCount) {
+    alert(`Not enough questions available in all categories for a ${state.selectedLicense.toUpperCase()} test. Required: Rules: 32, Signs: 32, Controls: ${controlCount}. Please ask an administrator to add more questions.`);
+    return;
+  }
+  
+  const rulesTest = shuffleAndSelect(rulesQuestions, 32);
+  const signsTest = shuffleAndSelect(signsQuestions, 32);
+  const controlsTest = shuffleAndSelect(controlQuestions, controlCount);
+  
+  const shuffledRulesAndSigns = [...rulesTest, ...signsTest].sort(() => Math.random() - 0.5);
+  const finalTest = [...shuffledRulesAndSigns, ...controlsTest]
+    .map(q => validateQuestionForTest(q))
+    .map((q, index) => ({
+      ...q,
+      questionNumber: index + 1
+    }));
+
+  // NEW: Validate test size before proceeding
+  const sizeValidation = validateTestSize(finalTest);
+  
+  if (!sizeValidation.valid) {
+    alert(`Cannot start test: ${sizeValidation.reason}\n\nPlease contact administrator.`);
+    console.error('Test size validation failed:', sizeValidation);
+    return;
+  }
+  
+  console.log(`Test size validated: ${sizeValidation.sizeKB.toFixed(1)}KB, ${sizeValidation.safetyMargin}`);
+  
+  state.currentTest = finalTest;
+  state.answers = new Array(state.currentTest.length).fill(null);
+  state.currentQuestion = 0;
+  state.page = 'test';
+  render();
+}
+
+function submitAnswer(answerIndex) {
+  state.answers[state.currentQuestion] = answerIndex;
+  
+  if (state.currentQuestion < state.currentTest.length - 1) {
+    state.currentQuestion++;
+  } else {
+    finishTest();
+  }
+  render();
+}
+
+// UPDATED: Admin functions with size checking
+function tryAdminLogin(password) {
+  if (password === 'admin123') {
+    state.isAdmin = true;
+    state.page = 'admin';
+    render();
+  } else {
+    alert('Incorrect password');
+    const adminCard = document.getElementById('adminCard');
+    if (adminCard) {
+      adminCard.classList.add('animate-shake');
+      setTimeout(() => adminCard.classList.remove('animate-shake'), 600);
+    }
+  }
+}
+
+function switchAdminTab(tab) {
+  state.adminPage = tab;
+  state.editingQuestion = null;
+  state.viewingTestDetails = null;
+  state.statisticsSearchTerm = '';
+  clearSearch();
+  render();
+}
+
+function addQuestion() {
+  state.editingQuestion = {
+    id: Date.now().toString(),
+    question: '',
+    options: ['', '', '', ''],
+    correct: 0,
+    category: state.selectedQuestionType,
+    image: null,
+    imageUrl: null,
+    imagePosition: 'top',
+    imageSize: 200
+  };
+  render();
+}
+
+// UPDATED: Save question with size checking
+async function saveQuestion() {
+  if (!state.editingQuestion) return;
+  
+  const q = state.editingQuestion;
+  
+  // NEW: Check question size
+  const sizeCheck = checkQuestionSize(q);
+  if (sizeCheck.warning) {
+    if (!confirm(`Warning: This question is large (${sizeCheck.sizeKB.toFixed(1)}KB).\n\nLarge questions may cause tests to exceed size limits.\n\nSave anyway?`)) {
+      return;
+    }
+  }
+  
+  if (!q.question.trim() || q.options.some(opt => !opt.trim())) {
+    alert('Please fill in all question fields');
+    return;
+  }
+  
+  const category = state.selectedQuestionType;
+  if (!state.questions[category]) {
+    state.questions[category] = [];
+  }
+  
+  const existingIndex = state.questions[category].findIndex(item => item.id === q.id);
+  if (existingIndex >= 0) {
+    state.questions[category][existingIndex] = q;
+  } else {
+    state.questions[category].push(q);
+  }
+  
+  state.editingQuestion = null;
+  
+  // Save to Firebase (with visual feedback)
+  const savedToFirebase = await saveQuestionsToFirebase();
+  
+  render();
+}
+
+function editQuestion(questionId) {
+  const category = state.selectedQuestionType;
+  const question = state.questions[category].find(q => q.id === questionId);
+  if (question) {
+    state.editingQuestion = JSON.parse(JSON.stringify(question));
+    render();
+  }
+}
+
+async function deleteQuestion(questionId) {
+  if (confirm('Are you sure you want to delete this question?')) {
+    const category = state.selectedQuestionType;
+    state.questions[category] = state.questions[category].filter(q => q.id !== questionId);
+    
+    // Save to Firebase (with visual feedback)
+    const savedToFirebase = await saveQuestionsToFirebase();
+    
+    render();
+  }
+}
+
+// Image Upload Functions
+function triggerImageUpload() {
+  document.getElementById('imageUpload').click();
+}
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+    return;
+  }
+  
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Image size must be less than 5MB');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    state.editingQuestion.image = e.target.result;
+    updateQuestionPreview();
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  if (state.editingQuestion) {
+    state.editingQuestion.image = null;
+    state.editingQuestion.imageUrl = null;
+    state.editingQuestion.imagePosition = 'top';
+    state.editingQuestion.imageSize = 200;
+    updateQuestionPreview();
+    render();
+  }
+}
+
+function setImagePosition(position) {
+  if (state.editingQuestion) {
+    state.editingQuestion.imagePosition = position;
+    updateQuestionPreview();
+    render();
+  }
+}
+
+function updateImageSize(value) {
+  if (state.editingQuestion) {
+    state.editingQuestion.imageSize = parseInt(value);
+    updateQuestionPreview();
+    render();
+  }
+}
+
+// Real-time preview functions
+function updateQuestionPreview() {
+  if (!state.editingQuestion) return;
+  
+  const previewElement = document.getElementById('questionPreview');
+  if (previewElement) {
+    previewElement.innerHTML = renderQuestionPreview();
+  }
+}
+
+function handleQuestionInput(value) {
+  if (state.editingQuestion) {
+    state.editingQuestion.question = value;
+    updateQuestionPreview();
+  }
+}
+
+function handleOptionInput(index, value) {
+  if (state.editingQuestion) {
+    state.editingQuestion.options[index] = value;
+    updateQuestionPreview();
+  }
+}
+
+function handleCorrectAnswerChange(index) {
+  if (state.editingQuestion) {
+    state.editingQuestion.correct = index;
+    updateQuestionPreview();
+  }
+}
+
+// Quick action functions
+function shuffleOptions() {
+  if (state.editingQuestion) {
+    const options = [...state.editingQuestion.options];
+    const correctAnswer = options[state.editingQuestion.correct];
+    
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    
+    state.editingQuestion.correct = options.indexOf(correctAnswer);
+    state.editingQuestion.options = options;
+    updateQuestionPreview();
+    render();
+  }
+}
+
+function clearQuestion() {
+  if (state.editingQuestion) {
+    state.editingQuestion.question = '';
+    state.editingQuestion.options = ['', '', '', ''];
+    state.editingQuestion.correct = 0;
+    state.editingQuestion.image = null;
+    state.editingQuestion.imageUrl = null;
+    state.editingQuestion.imagePosition = 'top';
+    state.editingQuestion.imageSize = 200;
+    updateQuestionPreview();
+    render();
+  }
+}
+
+function duplicateQuestion() {
+  if (state.editingQuestion) {
+    const original = state.editingQuestion;
+    state.editingQuestion = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: Date.now().toString(),
+      question: original.question + ' (Copy)',
+      image: null,
+      imageUrl: null
+    };
+    updateQuestionPreview();
+    render();
+  }
+}
+
+// MOBILE-OPTIMIZED RENDER FUNCTIONS
+function render() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  
+  document.body.style.backgroundColor = state.config.backgroundColor;
+  
+  let content = '';
+  switch (state.page) {
+    case 'role-selection':
+      content = renderRoleSelectionPage();
+      break;
+    case 'home':
+      content = renderHomePage();
+      break;
+    case 'id-input':
+      content = renderIdInputPage();
+      break;
+    case 'test':
+      content = renderTestPage();
+      break;
+    case 'results':
+      content = renderResultsPage();
+      break;
+    case 'admin-login':
+      content = renderAdminLoginPage();
+      break;
+    case 'admin':
+      content = renderAdminPage();
+      break;
+    default:
+      content = renderRoleSelectionPage();
+  }
+  
+  app.innerHTML = content;
+}
+
+function renderRoleSelectionPage() {
+  return `
+    <div class="role-selection-page safe-top safe-bottom">
+      <div class="role-card">
+        <h1 class="role-title">${state.config.appName}</h1>
+        <p class="role-subtitle">Select your role to continue</p>
+        <div class="role-buttons">
+          <button class="role-button student" onclick="selectRole('student')">
+            🎓 Student
+            <span class="text-sm font-normal">Take driving tests</span>
+          </button>
+          <button class="role-button staff" onclick="selectRole('staff')">
+            👨‍💼 Staff
+            <span class="text-sm font-normal">Admin portal access</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHomePage() {
+  return `
+    <div class="min-h-screen flex flex-col" style="background:${state.config.backgroundColor}">
+      <div class="mobile-header safe-top">
+        <button onclick="goHome()" class="mobile-back-btn">
+          ←
+        </button>
+        <div class="mobile-title">${state.config.appName}</div>
+      </div>
+      
+      <div class="mobile-content safe-bottom">
+        <div class="mobile-card">
+          <h2 class="text-xl font-bold mb-4 text-center" style="color:${state.config.secondaryColor}">Choose License Type</h2>
+          <div class="license-grid">
+            <button onclick="selectLicense('code1')" class="mobile-btn mobile-btn-primary">
+              📋 Code 1 License Test
+            </button>
+            <button onclick="selectLicense('code2')" class="mobile-btn mobile-btn-primary">
+              📋 Code 2 License Test
+            </button>
+            <button onclick="selectLicense('code3')" class="mobile-btn mobile-btn-primary">
+              📋 Code 3 License Test
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderIdInputPage() {
+  return `
+    <div class="min-h-screen">
+      <div class="mobile-header safe-top">
+        <button onclick="goHome()" class="mobile-back-btn">
+          ←
+        </button>
+        <div class="mobile-title">Enter ID Number</div>
+      </div>
+      
+      <div class="mobile-content safe-bottom">
+        <div class="mobile-card">
+          <p class="mb-4 text-gray-600">Please enter your ID number to start the ${state.selectedLicense ? state.selectedLicense.toUpperCase() : ''} test</p>
+          <input 
+            id="idInput" 
+            type="text" 
+            value="${state.idNumber}" 
+            placeholder="Enter at least 5 characters" 
+            class="mobile-input" 
+            oninput="state.idNumber=this.value"
+          >
+          <button onclick="startTest()" class="mobile-btn mobile-btn-primary">
+            Start ${state.selectedLicense ? state.selectedLicense.toUpperCase() : ''} Test
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderTestPage() {
+  if (!state.currentTest.length || state.currentQuestion >= state.currentTest.length) {
+    goHome();
+    return '';
+  }
+  
+  const q = state.currentTest[state.currentQuestion];
+  const progress = ((state.currentQuestion + 1) / state.currentTest.length) * 100;
+  
+  return `
+    <div class="min-h-screen">
+      <div class="mobile-header safe-top">
+        <div class="mobile-title">${state.config.appName}</div>
+      </div>
+      
+      <div class="p-4" style="background:${state.config.primaryColor}">
+        <div class="mobile-question-number">
+          Question ${state.currentQuestion + 1} of ${state.currentTest.length}
+        </div>
+        <div class="mobile-progress-bar">
+          <div class="mobile-progress-fill" style="width:${progress}%"></div>
+        </div>
+      </div>
+      
+      <div class="mobile-content safe-bottom">
+        ${renderSizeWarning()}
+        
+        <div class="mobile-question-card">
+          ${q.image || q.imageUrl ? `
+            <div class="text-center mb-4">
+              <img src="${q.imageUrl || q.image}" 
+                   class="test-question-image ${q.imagePosition}" 
+                   style="max-width: ${Math.min(q.imageSize || 200, 300)}px;"
+                   alt="Question image">
+            </div>
+          ` : ''}
+          <h2 class="text-lg font-bold mb-4" style="color:${state.config.secondaryColor}">${q.question}</h2>
+          <div class="space-y-2">
+            ${q.options.map((opt, idx) => `
+              <button 
+                onclick="submitAnswer(${idx})" 
+                class="mobile-option-btn ${state.answers[state.currentQuestion] === idx ? 'selected' : ''}" 
+                style="${state.answers[state.currentQuestion] === idx ? `background:${state.config.primaryColor}; color:white; border-color:${state.config.primaryColor}` : ''}">
+                <strong>${String.fromCharCode(65 + idx)}.</strong> ${opt}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderResultsPage() {
+  if (!state.testResults) {
+    goHome();
+    return '';
+  }
+  
+  const passed = state.testResults.percentage >= 70;
+  
+  return `
+    <div class="min-h-screen" style="background:${state.config.backgroundColor}">
+      <div class="mobile-header safe-top">
+        <div class="mobile-title">Test Results</div>
+      </div>
+      
+      <div class="mobile-content safe-bottom">
+        <div class="mobile-results-card">
+          <h2 class="text-2xl font-bold mb-4" style="color:${state.config.secondaryColor}">Test Complete!</h2>
+          
+          <div class="mobile-score">${state.testResults.percentage}%</div>
+          <div class="text-lg mb-2">${state.testResults.score} out of ${state.testResults.total} correct</div>
+          
+          <div class="text-xl font-bold mb-6" style="color:${passed ? '#10B981' : '#EF4444'}">
+            ${passed ? '✅ PASSED' : '❌ NOT PASSED'}
+          </div>
+        </div>
+        
+        <div class="results-grid">
+          <div class="mobile-stats-card">
+            <h3 class="text-lg font-bold mb-3 text-green-700">✅ Correct Answers (${state.testResults.results.filter(r => r.isCorrect).length})</h3>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+              ${state.testResults.results.filter(r => r.isCorrect).slice(0, 5).map(result => `
+                <div class="p-2 border border-green-200 rounded bg-green-50">
+                  <p class="text-sm font-semibold">${result.question.substring(0, 60)}${result.question.length > 60 ? '...' : ''}</p>
+                  <p class="text-xs text-green-700 mt-1">Your answer: ${String.fromCharCode(65 + result.userAnswer)}</p>
+                </div>
+              `).join('')}
+              ${state.testResults.results.filter(r => r.isCorrect).length > 5 ? 
+                `<p class="text-sm text-gray-500 text-center mt-2">+ ${state.testResults.results.filter(r => r.isCorrect).length - 5} more correct answers</p>` : ''}
+            </div>
+          </div>
+          
+          <div class="mobile-stats-card">
+            <h3 class="text-lg font-bold mb-3 text-red-700">❌ Incorrect Answers (${state.testResults.results.filter(r => !r.isCorrect).length})</h3>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+              ${state.testResults.results.filter(r => !r.isCorrect).slice(0, 5).map(result => `
+                <div class="p-2 border border-red-200 rounded bg-red-50">
+                  <p class="text-sm font-semibold">${result.question.substring(0, 60)}${result.question.length > 60 ? '...' : ''}</p>
+                  <p class="text-xs text-red-700 mt-1">Your answer: ${String.fromCharCode(65 + result.userAnswer)}</p>
+                  <p class="text-xs text-green-700 mt-1">Correct: ${String.fromCharCode(65 + result.correctAnswer)}</p>
+                </div>
+              `).join('')}
+              ${state.testResults.results.filter(r => !r.isCorrect).length > 5 ? 
+                `<p class="text-sm text-gray-500 text-center mt-2">+ ${state.testResults.results.filter(r => !r.isCorrect).length - 5} more incorrect answers</p>` : ''}
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="goHome()" class="mobile-btn mobile-btn-primary mt-4">Back to Home</button>
+      </div>
+    </div>`;
+}
+
+function renderAdminLoginPage() {
+  return `
+    <div class="min-h-screen flex items-center justify-center blur-bg safe-top safe-bottom" style="background: rgba(0,0,0,0.18)">
+      <div id="adminCard" class="login-fade mobile-modal">
+        <div class="p-6">
+          <h3 class="text-xl font-bold mb-4 text-center" style="color:${state.config.secondaryColor}">Staff Portal</h3>
+          <p class="text-sm text-gray-600 mb-4 text-center">Enter admin password to continue</p>
+          <input 
+            id="adminPw" 
+            type="password" 
+            placeholder="Enter password" 
+            class="mobile-input" 
+          />
+          <div class="flex gap-2">
+            <button onclick="tryAdminLogin(document.getElementById('adminPw').value)" class="mobile-btn mobile-btn-primary">Login</button>
+            <button onclick="goHome()" class="mobile-btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAdminPage() {
+  const tabs = [
+    { id: 'questions', label: 'Questions' },
+    { id: 'statistics', label: 'Statistics' },
+    { id: 'settings', label: 'Settings' }
+  ];
+  
+  return `
+    <div class="min-h-screen" style="background:${state.config.backgroundColor}">
+      <div class="mobile-header safe-top">
+        <button onclick="goHome()" class="mobile-back-btn">
+          ←
+        </button>
+        <div class="mobile-title">Admin Panel</div>
+      </div>
+      
+      <div class="mobile-content safe-bottom">
+        <div class="mobile-admin-tabs">
+          ${tabs.map(tab => `
+            <button onclick="switchAdminTab('${tab.id}')" 
+              class="mobile-tab-btn ${state.adminPage === tab.id ? 'active' : ''}">
+              ${tab.label}
+            </button>
+          `).join('')}
+        </div>
+        
+        ${renderAdminContent()}
+      </div>
+    </div>`;
+}
+
+function renderAdminContent() {
+  if (state.adminPage === 'questions') {
+    return renderAdminQuestions();
+  } else if (state.adminPage === 'statistics') {
+    return renderAdminStatistics();
+  } else if (state.adminPage === 'settings') {
+    return renderAdminSettings();
+  }
+  return '';
+}
+
+// Render search component
+function renderSearchComponent() {
+  return `
+    <div class="search-container">
+      <div class="search-input-group">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search by Student ID..." 
+          value="${searchState.searchTerm}"
+          oninput="searchState.searchTerm=this.value"
+          onkeypress="if(event.key === 'Enter') searchStudentTests()"
+        >
+        <button onclick="searchStudentTests()" class="search-btn">
+          ${searchState.isSearching ? '🔍' : 'Search'}
+        </button>
+        ${searchState.searchTerm ? `
+          <button onclick="clearSearch()" class="search-clear-btn">Clear</button>
+        ` : ''}
+      </div>
+      
+      ${searchState.searchTerm && searchState.searchResults.length > 0 ? `
+        <div class="search-results-info">
+          Found ${searchState.searchResults.length} student${searchState.searchResults.length !== 1 ? 's' : ''} matching "${searchState.searchTerm}"
+        </div>
+      ` : ''}
+      
+      ${searchState.searchTerm && searchState.searchResults.length === 0 && !searchState.isSearching ? `
+        <div class="search-no-results">
+          No students found matching "${searchState.searchTerm}"
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// FIXED: Render student details view with working buttons
+function renderStudentDetailsView() {
+  if (!searchState.selectedStudent || !state.testHistory[searchState.selectedStudent]) {
+    return '<div class="search-no-results">Student not found</div>';
+  }
+  
+  const studentId = searchState.selectedStudent;
+  const tests = state.testHistory[studentId];
+  const totalTests = tests.length;
+  const passedTests = tests.filter(t => t.passed).length;
+  const averageScore = Math.round(tests.reduce((sum, test) => sum + test.percentage, 0) / totalTests);
+  
+  // Check for duplicates in this student's tests
+  const duplicateCount = checkStudentDuplicates(studentId);
+  
+  return `
+    <div class="student-test-details">
+      <div class="student-header">
+        <div>
+          <div class="student-id">Student: ${studentId}</div>
+          <div class="text-sm text-gray-600 mt-1">${totalTests} test${totalTests !== 1 ? 's' : ''} total</div>
+          ${duplicateCount > 0 ? `
+            <div class="debug-info">
+              ⚠️ ${duplicateCount} possible duplicate${duplicateCount !== 1 ? 's' : ''} detected
+            </div>
+          ` : ''}
+        </div>
+        <button onclick="goBackToSearch()" class="text-sm text-blue-600 font-semibold">← Back</button>
+      </div>
+      
+      ${duplicateCount > 0 ? `
+        <div class="duplicate-warning">
+          <strong>⚠️ Duplicate Alert:</strong> This student has ${duplicateCount} possible duplicate test${duplicateCount !== 1 ? 's' : ''}.
+          Consider using "Clean Local Duplicates" in Settings.
+        </div>
+      ` : ''}
+      
+      <div class="analysis-stats">
+        <div class="stat-item">
+          <span class="stat-value">${totalTests}</span>
+          <span class="stat-label">Total Tests</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${passedTests}</span>
+          <span class="stat-label">Passed</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${totalTests - passedTests}</span>
+          <span class="stat-label">Failed</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${averageScore}%</span>
+          <span class="stat-label">Avg Score</span>
+        </div>
+      </div>
+      
+      <div class="section-title">Recent Tests</div>
+      <div class="test-list">
+        ${tests.slice().reverse().slice(0, 5).map((test, index) => {
+          // Calculate the original index in the tests array
+          const originalIndex = tests.length - 1 - index;
+          const isPossibleDuplicate = checkIfTestIsDuplicate(test, tests);
+          
+          return `
+            <div class="test-item" onclick="selectTestForAnalysis(${originalIndex})">
+              ${isPossibleDuplicate ? '<div class="debug-info">⚠️ Possible duplicate</div>' : ''}
+              <div class="test-summary">
+                <div class="test-summary-item">
+                  <span class="test-summary-label">Date</span>
+                  <span class="test-summary-value">${new Date(test.date).toLocaleDateString()}</span>
+                </div>
+                <div class="test-summary-item">
+                  <span class="test-summary-label">License</span>
+                  <span class="test-summary-value">${test.licenseType?.toUpperCase() || 'N/A'}</span>
+                </div>
+                <div class="test-summary-item">
+                  <span class="test-summary-label">Score</span>
+                  <span class="test-summary-value">${test.score}/${test.total}</span>
+                </div>
+                <div class="test-summary-item">
+                  <span class="test-summary-label">Result</span>
+                  <span class="test-result ${test.passed ? 'pass' : 'fail'}">
+                    ${test.passed ? 'PASS' : 'FAIL'} (${test.percentage}%)
+                  </span>
+                </div>
+              </div>
+              <div class="debug-info">
+                ID: ${test.firebaseId ? test.firebaseId.substring(0, 20) + '...' : 'No ID'}
+                ${test.saveMethod ? `\nSave: ${test.saveMethod}` : ''}
+              </div>
+              <button class="view-details-btn" onclick="event.stopPropagation(); selectTestForAnalysis(${originalIndex})">
+                View Detailed Analysis
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      ${tests.length > 5 ? `
+        <div class="text-center text-sm text-gray-500 mt-2">
+          Showing 5 most recent of ${tests.length} tests
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// Helper function to check for duplicates in student's tests
+function checkStudentDuplicates(studentId) {
+  if (!state.testHistory[studentId]) return 0;
+  
+  const tests = state.testHistory[studentId];
+  const seen = new Set();
+  let duplicateCount = 0;
+  
+  for (const test of tests) {
+    const key = `${test.timestamp}_${test.score}_${test.total}`;
+    if (seen.has(key)) {
+      duplicateCount++;
+    } else {
+      seen.add(key);
+    }
+  }
+  
+  return duplicateCount;
+}
+
+// Helper function to check if a specific test is a duplicate
+function checkIfTestIsDuplicate(test, allTests) {
+  let duplicateCount = 0;
+  
+  for (const otherTest of allTests) {
+    if (test === otherTest) continue; // Skip self
+    
+    // Check if they're the same test
+    if (test.firebaseId && otherTest.firebaseId && test.firebaseId === otherTest.firebaseId) {
+      duplicateCount++;
+      continue;
+    }
+    
+    // Check by timestamp (within 1 second)
+    if (test.timestamp && otherTest.timestamp && 
+        Math.abs(test.timestamp - otherTest.timestamp) < 1000) {
+      duplicateCount++;
+      continue;
+    }
+    
+    // Check by date and score
+    if (test.date && otherTest.date && 
+        test.score === otherTest.score &&
+        test.total === otherTest.total) {
+      const dateA = new Date(test.date).getTime();
+      const dateB = new Date(otherTest.date).getTime();
+      if (Math.abs(dateA - dateB) < 60000) { // Within 1 minute
+        duplicateCount++;
+      }
+    }
+  }
+  
+  return duplicateCount > 0;
+}
+
+// UPDATED: IMPROVED Render test analysis modal with better UI
+function renderTestAnalysisModal() {
+  if (!searchState.selectedTest) return '';
+  
+  const test = searchState.selectedTest;
+  
+  // Ensure test has results array
+  const results = Array.isArray(test.results) ? test.results : [];
+  const incorrectAnswers = results.filter(r => !r.isCorrect);
+  const correctAnswers = results.filter(r => r.isCorrect);
+  
+  // Calculate category performance
+  const categoryStats = {};
+  results.forEach(result => {
+    const category = result.category || 'unknown';
+    if (!categoryStats[category]) {
+      categoryStats[category] = { total: 0, correct: 0 };
+    }
+    categoryStats[category].total++;
+    if (result.isCorrect) {
+      categoryStats[category].correct++;
+    }
+  });
+  
+  return `
+    <div class="analysis-modal">
+      <div class="analysis-content">
+        <div class="analysis-header">
+          <div class="analysis-title">📊 Test Analysis</div>
+          <button onclick="closeAnalysis()" class="close-analysis-btn">×</button>
+        </div>
+        
+        <div class="analysis-body">
+          <!-- Score Display -->
+          <div class="analysis-score-display">
+            <div class="analysis-score-text">Overall Score</div>
+            <div class="analysis-percentage">${test.percentage}%</div>
+            <div class="text-xl font-semibold mb-2 text-gray-700">${test.score} / ${test.total} Questions</div>
+            <div class="analysis-pass-fail ${test.passed ? 'pass' : 'fail'}">
+              ${test.passed ? '✅ PASSED' : '❌ NOT PASSED'}
+            </div>
+          </div>
+          
+          <!-- Quick Stats -->
+          <div class="analysis-stats">
+            <div class="stat-item">
+              <span class="stat-value">${correctAnswers.length}</span>
+              <span class="stat-label">Correct Answers</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">${incorrectAnswers.length}</span>
+              <span class="stat-label">Incorrect Answers</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">${test.licenseType?.toUpperCase() || 'N/A'}</span>
+              <span class="stat-label">License Type</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">${new Date(test.date).toLocaleDateString()}</span>
+              <span class="stat-label">Test Date</span>
+            </div>
+          </div>
+          
+          <!-- Test Information -->
+          <div class="analysis-section">
+            <div class="section-title">Test Information</div>
+            <div class="test-summary-grid">
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Student ID</div>
+                <div class="test-summary-card-value">${test.userId}</div>
+              </div>
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">License Code</div>
+                <div class="test-summary-card-value">${test.licenseCode || test.licenseType || 'N/A'}</div>
+              </div>
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Test Date & Time</div>
+                <div class="test-summary-card-value">${new Date(test.date).toLocaleString()}</div>
+              </div>
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Result</div>
+                <div class="test-summary-card-value">
+                  <span class="test-result ${test.passed ? 'pass' : 'fail'}">
+                    ${test.passed ? 'PASSED' : 'FAILED'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Category Performance -->
+          ${Object.keys(categoryStats).length > 0 ? `
+            <div class="analysis-section">
+              <div class="section-title">Performance by Category</div>
+              ${Object.entries(categoryStats).map(([category, stats]) => {
+                const percentage = Math.round((stats.correct / stats.total) * 100);
+                return `
+                  <div class="category-progress">
+                    <div class="category-progress-label">
+                      <span>${category.replace('_', ' ').toUpperCase()}</span>
+                      <span>${stats.correct}/${stats.total} (${percentage}%)</span>
+                    </div>
+                    <div class="category-progress-bar">
+                      <div class="category-progress-fill ${category.includes('rules') ? 'rules' : category.includes('signs') ? 'signs' : 'controls'}" 
+                           style="width: ${percentage}%"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+          
+          <!-- Incorrect Answers Section -->
+          ${incorrectAnswers.length > 0 ? `
+            <div class="analysis-section">
+              <div class="section-title">
+                ❌ Incorrect Answers (${incorrectAnswers.length})
+              </div>
+              <p class="text-gray-600 mb-3 text-sm">Review what the student got wrong:</p>
+              <div class="incorrect-questions-list">
+                ${incorrectAnswers.map((result, index) => {
+                  const questionText = result.question || 'Question not available';
+                  const userAnswer = result.userAnswer !== undefined ? result.userAnswer : -1;
+                  const correctAnswer = result.correctAnswer !== undefined ? result.correctAnswer : -1;
+                  const options = Array.isArray(result.options) ? result.options : ['A', 'B', 'C', 'D'];
+                  const category = result.category || 'unknown';
+                  
+                  return `
+                    <div class="incorrect-question">
+                      <div class="question-text">
+                        <span class="question-number">${index + 1}</span>
+                        ${questionText}
+                      </div>
+                      <div class="answer-comparison">
+                        <div class="answer-row user-answer-row">
+                          <div class="answer-label">Student's Answer:</div>
+                          <div class="user-answer-text">
+                            ${userAnswer >= 0 ? `${String.fromCharCode(65 + userAnswer)}. ${options[userAnswer] || 'No answer'}` : 'No answer'}
+                          </div>
+                        </div>
+                        <div class="answer-row correct-answer-row">
+                          <div class="answer-label">Correct Answer:</div>
+                          <div class="correct-answer-text">
+                            ${correctAnswer >= 0 ? `${String.fromCharCode(65 + correctAnswer)}. ${options[correctAnswer] || 'Unknown'}` : 'Unknown'}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="category-badge-analysis">
+                        ${category.replace('_', ' ').toUpperCase()}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : results.length > 0 ? `
+            <div class="analysis-section">
+              <div class="section-title">🎉 Perfect Score!</div>
+              <div class="analysis-empty-state">
+                <div class="analysis-empty-icon">⭐</div>
+                <div class="analysis-empty-title">No Mistakes Found!</div>
+                <div class="analysis-empty-text">
+                  The student answered all questions correctly. Excellent performance!
+                </div>
+              </div>
+            </div>
+          ` : `
+            <div class="analysis-section">
+              <div class="section-title">⚠️ Limited Data Available</div>
+              <div class="analysis-empty-state">
+                <div class="analysis-empty-icon">📄</div>
+                <div class="analysis-empty-title">Detailed Results Not Available</div>
+                <div class="analysis-empty-text">
+                  Question-level data was not saved for this test. This usually happens when tests are too large or were saved in summary-only mode.
+                </div>
+              </div>
+            </div>
+          `}
+          
+          <!-- Technical Details -->
+          <div class="analysis-section">
+            <div class="section-title">Technical Details</div>
+            <div class="test-summary-grid">
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Firebase ID</div>
+                <div class="test-summary-card-value debug-info">${test.firebaseId ? test.firebaseId.substring(0, 20) + '...' : 'No ID'}</div>
+              </div>
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Save Method</div>
+                <div class="test-summary-card-value debug-info">${test.saveMethod || test.source || 'Unknown'}</div>
+              </div>
+              <div class="test-summary-card">
+                <div class="test-summary-card-label">Timestamp</div>
+                <div class="test-summary-card-value debug-info">${test.timestamp ? new Date(test.timestamp).toLocaleString() : 'No timestamp'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuestionPreview() {
+  if (!state.editingQuestion) return '';
+  
+  const q = state.editingQuestion;
+  const imageSrc = q.imageUrl || q.image;
+  
+  return `
+    <div class="question-preview">
+      ${imageSrc ? `
+        <div class="text-center mb-3">
+          <img src="${imageSrc}" 
+               class="test-question-image" 
+               style="max-width: ${Math.min(q.imageSize || 200, 250)}px;"
+               alt="Question image">
+        </div>
+      ` : ''}
+      <div class="preview-question-text">${q.question || 'Your question will appear here...'}</div>
+      <div class="preview-options">
+        ${q.options.map((option, index) => `
+          <div class="preview-option ${index === q.correct ? 'correct' : ''}">
+            <span class="preview-option-label">${String.fromCharCode(65 + index)}</span>
+            ${option || `Option ${String.fromCharCode(65 + index)}`}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderImageUploadSection() {
+  if (!state.editingQuestion) return '';
+  
+  const q = state.editingQuestion;
+  const imageSrc = q.imageUrl || q.image;
+  
+  return `
+    <div class="image-upload-section">
+      <h4 class="form-label">Question Image (Optional)</h4>
+      
+      <input type="file" id="imageUpload" class="file-input" accept="image/*" onchange="handleImageUpload(event)">
+      
+      <div id="imageUploadArea" class="image-upload-area" onclick="triggerImageUpload()">
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">Tap to upload image</div>
+        <div class="upload-subtext">PNG, JPG, GIF up to 5MB</div>
+      </div>
+      
+      ${imageSrc ? `
+        <div class="image-preview-container">
+          <img id="imagePreview" src="${imageSrc}" class="image-preview visible" alt="Image preview">
+          
+          <div class="image-actions">
+            <button onclick="triggerImageUpload()" class="image-action-btn">🔄 Change</button>
+            <button onclick="removeImage()" class="image-action-btn remove">🗑️ Remove</button>
+          </div>
+          
+          <div class="image-position-controls">
+            <button onclick="setImagePosition('top')" class="position-btn ${q.imagePosition === 'top' ? 'active' : ''}">Top</button>
+            <button onclick="setImagePosition('left')" class="position-btn ${q.imagePosition === 'left' ? 'active' : ''}">Left</button>
+            <button onclick="setImagePosition('right')" class="position-btn ${q.imagePosition === 'right' ? 'active' : ''}">Right</button>
+          </div>
+          
+          <div class="image-size-control">
+            <label class="form-label">Image Size: ${q.imageSize}px</label>
+            <input type="range" min="100" max="400" value="${q.imageSize}" 
+                   oninput="updateImageSize(this.value)" class="size-slider">
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderAdminQuestions() {
+  const questionTypes = [
+    { id: 'rules', label: 'Rules', count: state.questions.rules.length },
+    { id: 'signs', label: 'Signs', count: state.questions.signs.length },
+    { id: 'controls_code1', label: 'Code 1', count: state.questions.controls_code1.length },
+    { id: 'controls_code2', label: 'Code 2', count: state.questions.controls_code2.length },
+    { id: 'controls_code3', label: 'Code 3', count: state.questions.controls_code3.length }
+  ];
+  
+  if (state.editingQuestion) {
+    const q = state.editingQuestion;
+    return `
+      <div class="mobile-editor-container">
+        <div class="mobile-editor-form">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold" style="color:${state.config.secondaryColor}">Editing Question</h3>
+            <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">Live Preview</span>
+          </div>
+          
+          <div class="quick-actions">
+            <button onclick="shuffleOptions()" class="quick-action-btn">🔀 Shuffle</button>
+            <button onclick="clearQuestion()" class="quick-action-btn">🗑️ Clear</button>
+            <button onclick="duplicateQuestion()" class="quick-action-btn">📋 Duplicate</button>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Question Text</label>
+            <textarea 
+              class="form-input" 
+              rows="3" 
+              placeholder="Enter your question here..."
+              oninput="handleQuestionInput(this.value)"
+            >${q.question}</textarea>
+          </div>
+          
+          ${renderImageUploadSection()}
+          
+          <div class="form-group">
+            <label class="form-label">Answer Options</label>
+            ${[0, 1, 2, 3].map(i => `
+              <div class="option-input-group">
+                <div class="option-letter ${i === q.correct ? 'correct-option' : ''}">${String.fromCharCode(65 + i)}</div>
+                <input 
+                  type="text" 
+                  class="form-input option-input" 
+                  placeholder="Option ${String.fromCharCode(65 + i)}"
+                  value="${q.options[i] || ''}" 
+                  oninput="handleOptionInput(${i}, this.value)"
+                >
+                <input 
+                  type="radio" 
+                  name="correctAnswer" 
+                  ${i === q.correct ? 'checked' : ''}
+                  onchange="handleCorrectAnswerChange(${i})"
+                  style="min-width: 20px; min-height: 20px;"
+                >
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="action-buttons">
+            <button onclick="saveQuestion()" class="btn btn-primary">💾 Save Question</button>
+            <button onclick="state.editingQuestion=null; render();" class="btn btn-secondary">❌ Cancel</button>
+          </div>
+          
+          <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>💡 Firebase Sync:</strong> Questions auto-save to cloud. Check bottom-right for sync status.
+            </p>
+          </div>
+        </div>
+        
+        <div class="mobile-preview-panel">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold" style="color:${state.config.secondaryColor}">Preview</h3>
+            <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">Real-time</span>
+          </div>
+          <div id="questionPreview">
+            ${renderQuestionPreview()}
+          </div>
+        </div>
+      </div>`;
+  } else {
+    const questions = state.questions[state.selectedQuestionType] || [];
+    
+    return `
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        ${questionTypes.map(type => `
+          <button onclick="state.selectedQuestionType='${type.id}'; state.editingQuestion=null; render();" 
+            class="mobile-tab-btn ${state.selectedQuestionType === type.id ? 'active' : ''}">
+            ${type.label}
+            <div class="text-xs font-normal mt-1 ${state.selectedQuestionType === type.id ? 'text-white opacity-90' : 'text-gray-600'}">
+              ${type.count} questions
+            </div>
+          </button>
+        `).join('')}
+      </div>
+      
+      <div class="mb-4">
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button onclick="addQuestion()" class="mobile-btn mobile-btn-primary flex-1">
+            + Add Question
+          </button>
+          <button onclick="loadFromFirebase()" class="px-4 py-3 rounded bg-green-600 text-white font-bold flex items-center justify-center gap-2" id="loadButton">
+            <span id="loadIcon">↻</span>
+            <span>Load from Cloud</span>
+          </button>
+          <button onclick="saveQuestionsToFirebase()" class="px-4 py-3 rounded bg-blue-600 text-white font-bold flex items-center justify-center gap-2" id="saveButton">
+            <span id="saveIcon">☁️</span>
+            <span>Save to Cloud</span>
+          </button>
+        </div>
+        <div class="text-center font-bold mb-4">
+          Total: ${questions.length} questions
+        </div>
+      </div>
+      
+      <div class="mobile-question-list">
+        ${questions.length === 0 ? `
+          <div class="mobile-card text-center">
+            <p class="text-gray-500">No questions found. Add your first question!</p>
+          </div>
+        ` : questions.map(q => `
+          <div class="question-item">
+            <div class="flex-1">
+              <p class="font-bold mb-1 text-sm">${q.question.substring(0, 80)}${q.question.length > 80 ? '...' : ''}</p>
+              <div class="flex items-center text-xs text-gray-600">
+                <span>Correct: ${q.options[q.correct].substring(0, 30)}${q.options[q.correct].length > 30 ? '...' : ''}</span>
+                ${q.image || q.imageUrl ? '<span class="ml-2 text-blue-500">🖼️</span>' : ''}
+              </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button onclick="editQuestion('${q.id}')" 
+                class="flex-1 p-2 rounded text-white text-sm" style="background:${state.config.primaryColor}">
+                ✏️ Edit
+              </button>
+              <button onclick="deleteQuestion('${q.id}')" 
+                class="flex-1 p-2 rounded bg-red-500 text-white text-sm">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+}
+
+function renderAdminStatistics() {
+  // If a test is selected, show the analysis modal
+  if (searchState.selectedTest) {
+    return renderTestAnalysisModal() + renderStudentDetailsView();
+  }
+  
+  // If a student is selected, show their details
+  if (searchState.selectedStudent) {
+    return renderSearchComponent() + renderStudentDetailsView();
+  }
+  
+  // Otherwise show search and results
+  const historyEntries = Object.entries(state.testHistory);
+  
+  return `
+    <div class="mobile-card">
+      <h2 class="text-xl font-bold mb-4" style="color:${state.config.secondaryColor}">Student Test Search</h2>
+      
+      ${renderSearchComponent()}
+      
+      ${searchState.searchResults.length > 0 ? `
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          ${searchState.searchResults.map(([studentId, tests]) => {
+            const duplicateCount = checkStudentDuplicates(studentId);
+            return `
+              <div class="student-test-details">
+                <div class="student-header">
+                  <div>
+                    <div class="student-id">${studentId}</div>
+                    <div class="text-sm text-gray-600 mt-1">${tests.length} test${tests.length !== 1 ? 's' : ''}</div>
+                    ${duplicateCount > 0 ? `
+                      <div class="debug-info">
+                        ⚠️ ${duplicateCount} duplicate${duplicateCount !== 1 ? 's' : ''}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <button onclick="selectStudentForAnalysis('${studentId}')" class="text-sm text-blue-600 font-semibold">
+                    View Details →
+                  </button>
+                </div>
+                
+                <div class="test-summary">
+                  <div class="test-summary-item">
+                    <span class="test-summary-label">Last Test</span>
+                    <span class="test-summary-value">${new Date(tests[tests.length-1].date).toLocaleDateString()}</span>
+                  </div>
+                  <div class="test-summary-item">
+                    <span class="test-summary-label">Last Score</span>
+                    <span class="test-summary-value">${tests[tests.length-1].percentage}%</span>
+                  </div>
+                  <div class="test-summary-item">
+                    <span class="test-summary-label">Pass Rate</span>
+                    <span class="test-summary-value">
+                      ${Math.round((tests.filter(t => t.passed).length / tests.length) * 100)}%
+                    </span>
+                  </div>
+                  <div class="test-summary-item">
+                    <span class="test-summary-label">Status</span>
+                    <span class="test-result ${tests[tests.length-1].passed ? 'pass' : 'fail'}">
+                      ${tests[tests.length-1].passed ? 'PASS' : 'FAIL'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : historyEntries.length > 0 && !searchState.searchTerm ? `
+        <div class="text-center py-4">
+          <p class="text-gray-600 mb-3">Enter a student ID above to search for test results</p>
+          <p class="text-sm text-gray-500">
+            Total ${historyEntries.length} student${historyEntries.length !== 1 ? 's' : ''} in database
+          </p>
+        </div>
+      ` : !searchState.searchTerm ? `
+        <div class="text-center py-4">
+          <p class="text-gray-600">No test data available yet.</p>
+          <p class="text-sm text-gray-500 mt-2">Students will appear here after taking tests.</p>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderAdminSettings() {
+  // Calculate total duplicates
+  let totalDuplicates = 0;
+  for (const studentId in state.testHistory) {
+    totalDuplicates += checkStudentDuplicates(studentId);
+  }
+  
+  // Calculate question stats
+  const totalQuestions = Object.values(state.questions).reduce((sum, qs) => sum + qs.length, 0);
+  
+  return `
+    <div class="mobile-card">
+      <h2 class="text-xl font-bold mb-4">Admin Tools & Maintenance</h2>
+      
+      <div class="p-3 border rounded-lg bg-blue-50 mb-4">
+        <h3 class="font-bold mb-2">📊 Current Stats</h3>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div>Rules Questions: <strong>${state.questions.rules?.length || 0}</strong></div>
+          <div>Signs Questions: <strong>${state.questions.signs?.length || 0}</strong></div>
+          <div>Code 1 Controls: <strong>${state.questions.controls_code1?.length || 0}</strong></div>
+          <div>Code 2 Controls: <strong>${state.questions.controls_code2?.length || 0}</strong></div>
+          <div>Code 3 Controls: <strong>${state.questions.controls_code3?.length || 0}</strong></div>
+          <div>Total Questions: <strong>${totalQuestions}</strong></div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="loadFromFirebase()" class="p-3 rounded bg-green-600 text-white font-bold text-sm">
+          ↻ Reload from Cloud
+        </button>
+        <button onclick="saveQuestionsToFirebase()" class="p-3 rounded bg-blue-600 text-white font-bold text-sm">
+          💾 Save to Cloud
+        </button>
+        <button onclick="autoCleanDuplicateQuestions()" class="p-3 rounded bg-yellow-600 text-white font-bold text-sm">
+          🧹 Auto-Clean Duplicates
+        </button>
+        <button onclick="checkForDataAccumulation()" class="p-3 rounded bg-purple-600 text-white font-bold text-sm">
+          🔍 Check Accumulation
+        </button>
+        <button onclick="emergencyCleanupAndSave()" class="p-3 rounded bg-red-600 text-white font-bold text-sm">
+          🆘 Emergency Reset
+        </button>
+        <button onclick="testFirebaseConnection()" class="p-3 rounded bg-gray-600 text-white font-bold text-sm">
+          🔗 Test Connection
+        </button>
+        <button onclick="loadTestResultsFromFirebase()" class="p-3 rounded bg-indigo-600 text-white font-bold text-sm">
+          📊 Load Test Results
+        </button>
+        <button onclick="cleanFirebaseDuplicates()" class="p-3 rounded bg-red-600 text-white font-bold text-sm">
+          🗑️ Clean Firebase Duplicates
+        </button>
+        <button onclick="cleanDuplicateTestsInHistory()" class="p-3 rounded bg-yellow-600 text-white font-bold text-sm">
+          🧹 Clean Local Duplicates
+        </button>
+        <button onclick="testSaveSampleResult()" class="p-3 rounded bg-pink-600 text-white font-bold text-sm">
+          🧪 Test Save Sample
+        </button>
+        <button onclick="debugFirebaseData()" class="p-3 rounded bg-teal-600 text-white font-bold text-sm">
+          🔍 Debug Firebase Data
+        </button>
+      </div>
+      
+      <div class="p-3 border rounded-lg bg-gray-50 mt-4">
+        <h3 class="font-bold mb-2">Storage Strategy</h3>
+        <p class="text-sm text-gray-600 mb-1"><strong>Questions:</strong> Firebase-first (no local storage)</p>
+        <p class="text-sm text-gray-600 mb-1"><strong>Test History:</strong> Local storage + Firebase sync</p>
+        <p class="text-sm text-gray-600 mb-1"><strong>Config:</strong> Local storage + Firebase sync</p>
+        <p class="text-sm text-gray-600"><strong>Auto-cleanup:</strong> Active on every save/load</p>
+        <p class="text-sm text-gray-600 mt-1"><strong>Data Accumulation Check:</strong> Active on app start</p>
+        <p class="text-sm text-gray-600 mt-1"><strong>Emergency Recovery:</strong> Available if data corrupted</p>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// UPDATED INITIALIZATION
+// ============================================
+
+// UPDATED: Initialize with auto-cleanup
+document.addEventListener('DOMContentLoaded', async function() {
+  // Initialize Firebase
+  initializeFirebase();
+  
+  // Load config
+  const savedConfig = localStorage.getItem('drivingSchoolConfig');
+  if (savedConfig) {
+    try {
+      state.config = JSON.parse(savedConfig);
+    } catch (e) {
+      console.error('Error parsing config:', e);
+    }
+  }
+  
+  // Load history (keep this in localStorage for offline access)
+  const savedHistory = localStorage.getItem('drivingSchoolHistory');
+  if (savedHistory) {
+    try {
+      state.testHistory = JSON.parse(savedHistory);
+    } catch (e) {
+      console.error('Error parsing history:', e);
+    }
+  }
+  
+  // Load questions from Firebase (not from localStorage!)
+  let questionsLoaded = false;
+  
+  if (firebaseInitialized) {
+    // Try to load from Firebase first
+    questionsLoaded = await loadFromFirebase();
+  }
+  
+  if (!questionsLoaded) {
+    // Fallback: check cache
+    const cached = localStorage.getItem('drivingSchoolQuestions');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.questions) {
+          state.questions = parsed.questions;
+          console.log('📦 Using cached questions');
+          
+          // Check cache age (refresh if older than 1 hour)
+          if (parsed._cache && parsed._cache.timestamp) {
+            const cacheAge = Date.now() - parsed._cache.timestamp;
+            const oneHour = 60 * 60 * 1000;
+            
+            if (cacheAge > oneHour) {
+              console.log('🔄 Cache expired, attempting Firebase sync...');
+              if (firebaseInitialized) {
+                setTimeout(() => loadFromFirebase(), 2000);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse cache:', e);
+      }
+    }
+  }
+  
+  // Ensure we have questions
+  const totalQuestions = Object.values(state.questions).reduce((sum, qs) => sum + qs.length, 0);
+  if (totalQuestions === 0) {
+    console.log('Generating sample questions');
+    state.questions = generateSampleQuestions();
+  }
+  
+  // Auto-check for accumulation
+  setTimeout(() => {
+    checkForDataAccumulation();
+  }, 3000);
+  
+  // Start with role selection page
+  render();
+  
+  // Add event listeners for button loading states
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('#loadButton')) {
+      const button = e.target.closest('#loadButton');
+      const icon = button.querySelector('#loadIcon');
+      icon.textContent = '⏳';
+      button.disabled = true;
+      
+      // Restore button after load completes
+      setTimeout(() => {
+        icon.textContent = '↻';
+        button.disabled = false;
+      }, 2000);
+    }
+    
+    if (e.target.closest('#saveButton')) {
+      const button = e.target.closest('#saveButton');
+      const icon = button.querySelector('#saveIcon');
+      icon.textContent = '⏳';
+      button.disabled = true;
+      
+      // Restore button after save completes
+      setTimeout(() => {
+        icon.textContent = '☁️';
+        button.disabled = false;
+      }, 2000);
+    }
+    
+    // Handle load test results button
+    if (e.target.closest('#loadResultsBtn')) {
+      e.preventDefault();
+      loadTestResultsWithLoading();
+    }
+  });
+});
+  </script>
+</body>
+</html>
